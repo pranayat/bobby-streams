@@ -1,0 +1,15 @@
+image: blang/latex:ctanfull
+
+writing:
+    tags:
+        - docker
+    stage: build
+    script:
+        - cd writeup
+        - latexmk -pdf main.tex && mv main.pdf ../"Thesis.pdf"
+    artifacts:
+        paths:
+            - "Thesis.pdf"
+        expire_in: 1w
+    except: 
+        - tags
