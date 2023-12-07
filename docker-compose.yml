@@ -1,0 +1,16 @@
+version: '3.2'
+
+services:
+    storm-nimbus:
+        build: ./storm-nimbus
+        tty: true
+        ports:
+            - 8080:8080
+            - 8998:8998
+        volumes:
+            - './storm-nimbus:/storm-nimbus'
+        environment:
+            - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998"
+
+volumes:
+    storm-nimbus:
