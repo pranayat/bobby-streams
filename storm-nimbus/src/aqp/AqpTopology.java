@@ -3,109 +3,57 @@ package aqp;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
-import org.apache.storm.task.OutputCollector;
-import org.apache.storm.task.TopologyContext;
-// import org.apache.storm.testing.TestWordSpout;
-import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
-import org.apache.storm.topology.base.BaseRichBolt;
 import org.apache.storm.tuple.Fields;
-import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
-import org.apache.storm.utils.Utils;
-
-import java.util.Map;
-
-import aqp.DataSpout;
-import aqp.GridBolt;
 
 public class AqpTopology {
+    public static void main(String[] args) throws Exception {
+        TopologyBuilder builder = new TopologyBuilder();
 
-  // public static class ExclamationBolt extends BaseRichBolt
-  // {
-  //   OutputCollector _collector;
+        builder.setSpout("data", new DataSpout(), 1);
+        builder.setSpout("query", new QuerySpout(), 1);
 
-  //   @Override
-  //   public void prepare(
-  //       Map                     map,
-  //       TopologyContext         topologyContext,
-  //       OutputCollector         collector)
-  //   {
-  //     _collector = collector;
-  //   }
+        builder.setBolt("grid", new GridBolt(), 1)
+                .shuffleGrouping("data")
+                .shuffleGrouping("query");
 
-  //   @Override
-  //   public void execute(Tuple tuple)
-  //   {
-  //     // get the column word from tuple
-  //     String word = tuple.getString(0);
+        builder.setBolt("cube", new CubeBolt(), 1)
+                .fieldsGrouping("grid", new Fields("cubeId"));
 
-  //     // build the word with the exclamation marks appended
-  //     StringBuilder exclamatedWord = new StringBuilder();
-  //     exclamatedWord.append(word).append("!!!");
+        Config conf = new Config();
 
-  //     // emit the word with exclamations
-  //     _collector.emit(tuple, new Values(exclamatedWord.toString()));
-  //   }
+        conf.setDebug(false);
 
-  //   @Override
-  //   public void declareOutputFields(OutputFieldsDeclarer declarer)
-  //   {
-  //     // tell storm the schema of the output tuple for this spout
+        if (args != null && args.length > 0) {
 
-  //     // tuple consists of a single column called 'exclamated-word'
-  //     declarer.declare(new Fields("exclamated-word"));
-  //   }
-  // }
+            // run it in a live cluster
 
-  public static void main(String[] args) throws Exception
-  {
-    // create the topology
-    TopologyBuilder builder = new TopologyBuilder();
+            // set the number of workers for running all spout and bolt tasks
+            // If we have two supervisors with 4 allocated workers each, and this topology is
+            // submitted to the master (Nimbus) node, then these 8 workers will be distributed
+            // to the two supervisors evenly: four each.
+            conf.setNumWorkers(8);
 
-    // attach the word spout to the topology - parallelism of 10
-    builder.setSpout("data", new DataSpout(), 1);
+            // create the topology and submit with config
+            StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
 
-    // attach the exclamation bolt to the topology - parallelism of 3
-    builder.setBolt("grid", new GridBolt(), 1).shuffleGrouping("data");
+        } else {
 
-    // create the default config object
-    Config conf = new Config();
+            // run it in a simulated local cluster
 
-    // set the config in debugging mode
-    conf.setDebug(false);
+            // create the local cluster instance
+            LocalCluster cluster = new LocalCluster();
 
-    if (args != null && args.length > 0) {
+            // submit the topology to the local cluster
+            cluster.submitTopology("aqp", conf, builder.createTopology());
 
-      // run it in a live cluster
+            // let the topology run for 20 seconds. note topologies never terminate!
+            Thread.sleep(200000);
 
-      // set the number of workers for running all spout and bolt tasks
-      // If we have two supervisors with 4 allocated workers each, and this topology is
-      // submitted to the master (Nimbus) node, then these 8 workers will be distributed
-      // to the two supervisors evenly: four each. 
-      conf.setNumWorkers(8);
+            cluster.killTopology("aqp");
 
-      // create the topology and submit with config
-      StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
-
-    } else {
-
-      // run it in a simulated local cluster
-
-      // create the local cluster instance
-      LocalCluster cluster = new LocalCluster();
-
-      // submit the topology to the local cluster
-      cluster.submitTopology("aqp", conf, builder.createTopology());
-
-      // let the topology run for 20 seconds. note topologies never terminate!
-      Thread.sleep(200000);
-
-      // kill the topology
-      cluster.killTopology("aqp");
-
-      // we are done, so shutdown the local cluster
-      cluster.shutdown();
+            // we are done, so shutdown the local cluster
+            cluster.shutdown();
+        }
     }
-  }
 }

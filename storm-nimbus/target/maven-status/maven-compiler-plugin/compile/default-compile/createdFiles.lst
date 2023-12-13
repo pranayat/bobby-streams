@@ -1,3 +1,7 @@
 aqp/AqpTopology.class
 aqp/DataSpout.class
+aqp/CubeBolt.class
+aqp/JoinQuery.class
+aqp/JoinQueryCache.class
 aqp/GridBolt.class
+aqp/QuerySpout.class
