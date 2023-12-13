@@ -1,3 +1,7 @@
+/storm-nimbus/src/aqp/QuerySpout.java
+/storm-nimbus/src/aqp/JoinQueryCache.java
+/storm-nimbus/src/aqp/CubeBolt.java
 /storm-nimbus/src/aqp/DataSpout.java
 /storm-nimbus/src/aqp/GridBolt.java
+/storm-nimbus/src/aqp/JoinQuery.java
 /storm-nimbus/src/aqp/AqpTopology.java
