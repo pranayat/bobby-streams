@@ -19,10 +19,10 @@ public class QuerySpout extends BaseRichSpout {
 
     @Override
     public void nextTuple() {
-        collector.emit(new Values("query", "stream_1,stream_2", "lat,long,alt", 10));
+        collector.emit("query", new Values("stream_1,stream_2", "lat,long,alt", 10));
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -30,6 +30,6 @@ public class QuerySpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("tupleType", "streamIds", "columns", "distance"));
+        declarer.declareStream("query", new Fields("streamIds", "columns", "distance"));
     }
 }

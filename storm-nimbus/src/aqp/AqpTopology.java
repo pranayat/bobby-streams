@@ -14,11 +14,14 @@ public class AqpTopology {
         builder.setSpout("query", new QuerySpout(), 1);
 
         builder.setBolt("grid", new GridBolt(), 1)
-                .shuffleGrouping("data")
-                .shuffleGrouping("query");
+                .shuffleGrouping("data", "stream_1")
+                .shuffleGrouping("data", "stream_2")
+                .shuffleGrouping("query", "query");
 
         builder.setBolt("cube", new CubeBolt(), 1)
-                .fieldsGrouping("grid", new Fields("cubeId"));
+                .fieldsGrouping("grid", "stream_1", new Fields("cubeId"))
+                .fieldsGrouping("grid", "stream_2", new Fields("cubeId"))
+                .allGrouping("grid", "query");
 
         Config conf = new Config();
 
