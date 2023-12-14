@@ -31,6 +31,6 @@ public class CubeBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("tupleType", "streamId", "cubeId", "lat", "long", "alt", "text"));
+        declarer.declare(new Fields("cubeId", "lat", "long", "alt", "text"));
     }
 }

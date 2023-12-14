@@ -27,10 +27,11 @@ public class DataSpout extends BaseRichSpout {
         double altitude = generateRandomAltitude();
         String text = generateRandomText();
 
-        collector.emit(new Values("data", "stream_1", latitude, longitude, altitude, text));
+        collector.emit("stream_1", new Values(latitude, longitude, altitude, text));
+        collector.emit("stream_2", new Values(latitude, longitude, altitude, text));
 
         try {
-            Thread.sleep(5000);
+            Thread.sleep(1000);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -38,7 +39,8 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("tupleType", "streamId", "lat", "long", "alt", "text"));
+        declarer.declareStream("stream_1", new Fields("lat", "long", "alt", "text"));
+        declarer.declareStream("stream_2", new Fields("lat", "long", "alt", "text"));
     }
 
     private double generateRandomCoordinate(double min, double max) {
