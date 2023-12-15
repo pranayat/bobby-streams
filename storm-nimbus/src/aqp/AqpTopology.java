@@ -3,28 +3,36 @@ package aqp;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
+import org.apache.storm.topology.BoltDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
+import org.apache.storm.topology.base.BaseWindowedBolt;
 import org.apache.storm.tuple.Fields;
+
+import java.util.List;
+import java.util.Map;
 
 public class AqpTopology {
     public static void main(String[] args) throws Exception {
-        TopologyBuilder builder = new TopologyBuilder();
 
+        SchemaConfig schemaConfig = SchemaConfigBuilder.build();
+
+        TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("data", new DataSpout(), 1);
         builder.setSpout("query", new QuerySpout(), 1);
 
-        builder.setBolt("grid", new GridBolt(), 1)
-                .shuffleGrouping("data", "stream_1")
-                .shuffleGrouping("data", "stream_2")
-                .shuffleGrouping("query", "query");
+        BoltDeclarer bolt = builder.setBolt("grid", new GridBolt(), 1);
+        for (Map.Entry<String, List<String>> stream : schemaConfig.getStreams().entrySet()) {
+            bolt.shuffleGrouping("data", stream.getKey());
+        }
+        bolt.shuffleGrouping("query", "query");
 
-        builder.setBolt("cube", new CubeBolt(), 1)
-                .fieldsGrouping("grid", "stream_1", new Fields("cubeId"))
-                .fieldsGrouping("grid", "stream_2", new Fields("cubeId"))
-                .allGrouping("grid", "query");
+        bolt = builder.setBolt("cube", new CubeBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(5)), 1);
+        for (Map.Entry<String, List<String>> stream : schemaConfig.getStreams().entrySet()) {
+            bolt.fieldsGrouping("grid", stream.getKey(), new Fields("cubeId"));
+        }
+        bolt.allGrouping("grid", "query");
 
         Config conf = new Config();
-
         conf.setDebug(false);
 
         if (args != null && args.length > 0) {
@@ -51,12 +59,12 @@ public class AqpTopology {
             cluster.submitTopology("aqp", conf, builder.createTopology());
 
             // let the topology run for 20 seconds. note topologies never terminate!
-            Thread.sleep(200000);
+//            Thread.sleep(200000);
 
-            cluster.killTopology("aqp");
+//            cluster.killTopology("aqp");
 
             // we are done, so shutdown the local cluster
-            cluster.shutdown();
+//            cluster.shutdown();
         }
     }
 }

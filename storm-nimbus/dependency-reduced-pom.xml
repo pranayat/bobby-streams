@@ -10,10 +10,9 @@
   <name>aqp</name>
   <build>
     <sourceDirectory>src</sourceDirectory>
-    <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
-        <directory>${basedir}/multilang</directory>
+        <directory>src/aqp/resources</directory>
       </resource>
     </resources>
     <plugins>

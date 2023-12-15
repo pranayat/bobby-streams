@@ -7,15 +7,22 @@ import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class DataSpout extends BaseRichSpout {
     private SpoutOutputCollector collector;
     private Random random;
+    private SchemaConfig schemaConfig;
+
+    public DataSpout() {
+        this.schemaConfig = SchemaConfigBuilder.build();
+    }
 
     @Override
-    public void open(Map<String, Object> config, TopologyContext context, SpoutOutputCollector collector) {
+    public void open(Map<String, Object> stormConfig, TopologyContext context, SpoutOutputCollector collector) {
         this.collector = collector;
         this.random = new Random();
     }
@@ -25,7 +32,7 @@ public class DataSpout extends BaseRichSpout {
         double latitude = generateRandomCoordinate(-90, 90);
         double longitude = generateRandomCoordinate(-180, 180);
         double altitude = generateRandomAltitude();
-        String text = generateRandomText();
+        double text = generateRandomDouble();
 
         collector.emit("stream_1", new Values(latitude, longitude, altitude, text));
         collector.emit("stream_2", new Values(latitude, longitude, altitude, text));
@@ -39,8 +46,10 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("stream_1", new Fields("lat", "long", "alt", "text"));
-        declarer.declareStream("stream_2", new Fields("lat", "long", "alt", "text"));
+        for (Map.Entry<String, List<String>> stream : this.schemaConfig.getStreams().entrySet()) {
+            List<String> fields = new ArrayList<String>(stream.getValue());
+            declarer.declareStream(stream.getKey(), new Fields(fields));
+        }
     }
 
     private double generateRandomCoordinate(double min, double max) {
@@ -51,8 +60,8 @@ public class DataSpout extends BaseRichSpout {
         return 10000;
     }
 
-    private String generateRandomText() {
-        String[] texts = {"Hello", "Storm", "Spout", "Tuple", "Apache"};
+    private Double generateRandomDouble() {
+        Double[] texts = {1.0, 2.0, 3.0, 4.0, 5.0};
         return texts[random.nextInt(texts.length)];
     }
 }

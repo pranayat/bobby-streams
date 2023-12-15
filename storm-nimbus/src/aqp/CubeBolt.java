@@ -3,14 +3,16 @@ package aqp;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.apache.storm.topology.base.BaseRichBolt;
+import org.apache.storm.topology.base.BaseWindowedBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.windowing.TupleWindow;
 
 import java.util.Map;
 
-public class CubeBolt extends BaseRichBolt {
+public class CubeBolt extends BaseWindowedBolt {
     OutputCollector _collector;
+    private JoinQueryCache joinQueryCache;
 
     @Override
     public void prepare(
@@ -19,14 +21,14 @@ public class CubeBolt extends BaseRichBolt {
             OutputCollector collector) {
         _collector = collector;
 
-//        this.joinQueryCache = JoinQueryCache.getInstance();
+        this.joinQueryCache = JoinQueryCache.getInstance();
     }
 
     @Override
-    public void execute(Tuple input) {
-        System.out.println("cubeee " + input);
-//        if (input.getSourceComponent().equals("data") && this.joinQueryCache.size() > 0) {
-//        }
+    public void execute(TupleWindow inputWindow) {
+        for (Tuple tuple : inputWindow.get()) {
+
+        }
     }
 
     @Override
