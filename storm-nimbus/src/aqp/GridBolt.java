@@ -8,14 +8,18 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
 
 public class GridBolt extends BaseRichBolt {
     OutputCollector _collector;
-    private JoinQueryCache joinQueryCache;
+    private SchemaConfig schemaConfig;
+
+    public GridBolt() {
+        this.schemaConfig = SchemaConfigBuilder.build();
+    }
 
     private int[] calculateAdjacentCube(int[] cubeLabel, int index, int dimensions) {
         int[] adjacentCube = new int[dimensions];
@@ -33,21 +37,19 @@ public class GridBolt extends BaseRichBolt {
         return adjacentCube;
     }
 
-    private int[] getCube(Tuple tuple, JoinQuery joinQuery) {
-        int[] cube = new int[joinQuery.getDimension()];
-
-        String[] columns = joinQuery.getColumns();
-        int dimensions = joinQuery.getDimension();
+    private int[] getCube(Tuple tuple, List<String> joinColumns) {
+        int dimensions = joinColumns.size();
+        int[] cube = new int[dimensions];
         for (int i = 0; i < dimensions; i++) {
-            cube[i] = (int) (tuple.getDoubleByField(columns[i]) / 10);
+            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / 10);
         }
 
         return cube;
     }
 
-    private int[][] getCubesForTuple(Tuple tuple, JoinQuery joinQuery) {
-        int[] cube = getCube(tuple, joinQuery);
-        int dimensions = joinQuery.getDimension();
+    private int[][] getCubesForTuple(Tuple tuple, List<String> joinColumns) {
+        int[] cube = getCube(tuple, joinColumns);
+        int dimensions = joinColumns.size();
         int adjacentCount = (int) Math.pow(3, dimensions);
         int[][] allCubes = new int[adjacentCount + 1][dimensions];
 
@@ -63,38 +65,45 @@ public class GridBolt extends BaseRichBolt {
 
     @Override
     public void prepare(
-            Map map,
+            Map stormConfig,
             TopologyContext topologyContext,
             OutputCollector collector) {
         _collector = collector;
-
-        this.joinQueryCache = JoinQueryCache.getInstance();
+//        this.joinQueryCache = JoinQueryCache.getInstance();
     }
 
     @Override
     public void execute(Tuple input) {
         if (!input.getSourceStreamId().equals("query")) {
-            if (this.joinQueryCache.size() == 0) {
-                // which cube to emit to ?
-                return;
-            }
-            Set<Map.Entry<UUID, JoinQuery>> querySet = this.joinQueryCache.getAllElements();
-            for (Map.Entry<UUID, JoinQuery> joinQuery : querySet) {
-                for (int[] cube : this.getCubesForTuple(input, joinQuery.getValue())) {
+//            Set<Map.Entry<UUID, JoinQuery>> querySet = this.joinQueryCache.getAllElements();
+            List<List<String>> joinIndices = this.schemaConfig.getJoinIndices();
+            for (List<String> joinColumns : joinIndices) {
+                for (int[] cube : this.getCubesForTuple(input, joinColumns)) {
                     System.out.println("emitting to " + Arrays.toString(cube));
-                    _collector.emit(input.getSourceStreamId(), new Values(Arrays.toString(cube), input.getDoubleByField("lat"), input.getDoubleByField("long"), input.getDoubleByField("alt"), input.getStringByField("text")));
+                    List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
+                    List<Object> values = new ArrayList<Object>();
+                    for (String field : fields) {
+                        values.add(input.getDoubleByField(field));
+                    }
+                    values.add(Arrays.toString(cube));
+
+                    _collector.emit(input.getSourceStreamId(), new Values(values.toArray()));
                 }
             }
         } else {
-            this.joinQueryCache.put(new JoinQuery(input.getStringByField("streamIds").split(","), input.getStringByField("columns").split(","), input.getIntegerByField("distance")));
+//            this.joinQueryCache.put(new JoinQuery(input.getStringByField("streamIds").split(","), input.getStringByField("columns").split(","), input.getIntegerByField("distance")));
             _collector.emit(input.getSourceStreamId(), new Values(input.getStringByField("streamIds"), input.getStringByField("columns"), input.getIntegerByField("distance")));
         }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("stream_1", new Fields("cubeId", "lat", "long", "alt", "text"));
-        declarer.declareStream("stream_2", new Fields("cubeId", "lat", "long", "alt", "text"));
+        for (Map.Entry<String, List<String>> stream : this.schemaConfig.getStreams().entrySet()) {
+            List<String> fields = new ArrayList<String>(stream.getValue());
+            fields.add("cubeId");
+            declarer.declareStream(stream.getKey(), new Fields(fields));
+        }
+
         declarer.declareStream("query", new Fields("streamIds", "columns", "distance"));
     }
 }
