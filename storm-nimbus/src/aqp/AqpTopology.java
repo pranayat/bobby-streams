@@ -26,9 +26,10 @@ public class AqpTopology {
         }
         bolt.shuffleGrouping("query", "query");
 
-        bolt = builder.setBolt("cube", new CubeBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(5)), 1);
+        bolt = builder.setBolt("cube", new CubeBolt().withWindow(new BaseWindowedBolt.Count(1000), new BaseWindowedBolt.Count(1000)), 1);
         for (Map.Entry<String, List<String>> stream : schemaConfig.getStreams().entrySet()) {
             bolt.fieldsGrouping("grid", stream.getKey(), new Fields("cubeId"));
+//            bolt.allGrouping("grid", stream.getKey());
         }
         bolt.allGrouping("grid", "query");
 

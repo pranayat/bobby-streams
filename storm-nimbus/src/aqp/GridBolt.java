@@ -76,12 +76,14 @@ public class GridBolt extends BaseRichBolt {
     public void execute(Tuple input) {
         if (!input.getSourceStreamId().equals("query")) {
 //            Set<Map.Entry<UUID, JoinQuery>> querySet = this.joinQueryCache.getAllElements();
+            List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
+            List<Object> values;
+            // emit tuple to hypercubes of different dimensions (for different join column combinations)
             List<List<String>> joinIndices = this.schemaConfig.getJoinIndices();
             for (List<String> joinColumns : joinIndices) {
                 for (int[] cube : this.getCubesForTuple(input, joinColumns)) {
                     System.out.println("emitting to " + Arrays.toString(cube));
-                    List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
-                    List<Object> values = new ArrayList<Object>();
+                    values = new ArrayList<Object>();
                     for (String field : fields) {
                         values.add(input.getDoubleByField(field));
                     }

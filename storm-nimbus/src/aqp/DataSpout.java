@@ -29,9 +29,9 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void nextTuple() {
-        double latitude = generateRandomCoordinate(-90, 90);
-        double longitude = generateRandomCoordinate(-180, 180);
-        double altitude = generateRandomAltitude();
+        double latitude = generateRandomCoordinate(10000, 50000);
+        double longitude = generateRandomCoordinate(1000, 50000);
+        double altitude = generateRandomCoordinate(1000, 50000);
         double text = generateRandomDouble();
 
         collector.emit("stream_1", new Values(latitude, longitude, altitude, text));
@@ -54,10 +54,6 @@ public class DataSpout extends BaseRichSpout {
 
     private double generateRandomCoordinate(double min, double max) {
         return min + (max - min) * random.nextDouble();
-    }
-
-    private double generateRandomAltitude() {
-        return 10000;
     }
 
     private Double generateRandomDouble() {
