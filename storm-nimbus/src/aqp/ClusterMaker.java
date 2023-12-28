@@ -108,7 +108,7 @@ public class ClusterMaker {
                                               int maxIterations) {
 
         List<List<Double>> centroids = randomCentroids(tuples, k);
-        Map<List<Double>, List<Tuple>> clusters = new HashMap<>();
+        Map<List<Double>, List<Tuple>> clusters = new LinkedHashMap<>();
         Map<List<Double>, List<Tuple>> lastState = new HashMap<>();
 
         // iterate for a pre-defined number of times

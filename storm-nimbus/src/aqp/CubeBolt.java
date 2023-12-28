@@ -16,6 +16,7 @@ public class CubeBolt extends BaseWindowedBolt {
     private JoinQueryCache joinQueryCache;
     private SchemaConfig schemaConfig;
     private List<List<String>> joinIndices;
+    private BPlusTree bPlusTree;
 
     public CubeBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
@@ -35,20 +36,23 @@ public class CubeBolt extends BaseWindowedBolt {
     @Override
     public void execute(TupleWindow inputWindow) {
 
+        // TODO just dealing with lat,long index for now
         List<String> joinIndex = this.joinIndices.get(0);
         TupleWrapper tupleWrapper = new TupleWrapper(joinIndex);
         ClusterMaker clusterMaker = new ClusterMaker(tupleWrapper);
-        Map<List<Double>, List<Tuple>> cluster = clusterMaker.fit(inputWindow.get(), 3, 100);
+        Map<List<Double>, List<Tuple>> clusters = clusterMaker.fit(inputWindow.get(), 3, 100);
+        this.bPlusTree = new BPlusTree(512);
 
-        System.out.println(cluster);
-//        for (Tuple tuple : inputWindow.get()) {
-//
-//            // for each stream
-//            // if the tuple belongs to this stream's spatial index
-//            for (Map.Entry<String, List<String>> stream : this.schemaConfig.getStreams().entrySet()) {
-//
-//            }
-//        }
+        int i = 1;
+        int c = 100000;
+        Distance distance = new EuclideanDistance();
+        for (Map.Entry<List<Double>, List<Tuple>> cluster : clusters.entrySet()) {
+            for (Tuple tuple : cluster.getValue()) {
+                this.bPlusTree.insert(i * c + distance.calculate(cluster.getKey(), tupleWrapper.getCoordinates(tuple)), tuple);
+            }
+            i += 1;
+        }
+        System.out.println(this.bPlusTree);
     }
 
     @Override
