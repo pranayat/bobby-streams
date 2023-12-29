@@ -8,8 +8,10 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.windowing.TupleWindow;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class CubeBolt extends BaseWindowedBolt {
     OutputCollector _collector;
@@ -42,17 +44,41 @@ public class CubeBolt extends BaseWindowedBolt {
         ClusterMaker clusterMaker = new ClusterMaker(tupleWrapper);
         List<Cluster> clusters = clusterMaker.fit(inputWindow.get(), 3, 100);
         this.bPlusTree = new BPlusTree(512);
+        int joinRadius = 10;
 
-        int i = 1;
         int c = 100000;
         Distance distance = new EuclideanDistance();
-        for (Cluster cluster : clusters) {
-            for (Tuple tuple : cluster.getTuples()) {
-                this.bPlusTree.insert(i * c + distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
+        for (Tuple tuple : inputWindow.get()) {
+            List<Tuple> joinCandidates = new ArrayList<>();
+            for (Cluster cluster : clusters) {
+                double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+                /* if tuple is inside cluster sphere
+                then search between i * c + dist(O_i, q) - join_radius
+                and
+                min(i * c + dist_max_i, i * c + dist(O_i,q) + join_radius)
+                 */
+                if (queryTupleToCentroidDistance < cluster.getRadius()) {
+                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinRadius,
+                            Math.min(cluster.getI() * c + cluster.getRadius(), cluster.getI() * c + queryTupleToCentroidDistance + joinRadius)));
+                }
+                /* tuple is outside the cluster sphere but its query sphere intersects the cluster sphere
+                then search between i * c + dist(O_i, q) - join_radius
+                and
+                i * c + dist(O_i, dist_max_i)
+                 */
+                else if (queryTupleToCentroidDistance < cluster.getRadius() + joinRadius) {
+                    joinCandidates.addAll(this.bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinRadius,
+                            cluster.getI() * c + cluster.getRadius()));
+                }
+
+                // don't join with the same stream
+                List<Tuple> filteredList = joinCandidates.stream()
+                        .filter(joinCandidate -> !tuple.getSourceStreamId().equals(joinCandidate.getSourceStreamId()))
+                        .collect(Collectors.toList());
+
+                this.bPlusTree.insert(cluster.getI() * c + distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
             }
-            i += 1;
         }
-        System.out.println(this.bPlusTree);
     }
 
     @Override

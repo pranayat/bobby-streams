@@ -704,7 +704,7 @@ public class BPlusTree {
      * @return an ArrayList<Tuple> that holds all values of dictionary pairs
      * whose keys are within the specified range
      */
-    public ArrayList<Tuple> search(int lowerBound, int upperBound) {
+    public ArrayList<Tuple> search(double lowerBound, double upperBound) {
 
         // Instantiate Tuple array to hold values
         ArrayList<Tuple> values = new ArrayList<Tuple>();
