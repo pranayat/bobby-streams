@@ -10,16 +10,28 @@ import java.util.Random;
 class Cluster {
     List<Double> centroid;
     List<Tuple> tuples;
-    double maxDistance;
+    double radius;
     Distance distance;
     TupleWrapper tupleWrapper;
+    static int counter = 0;
+    int i;
 
     Cluster(List<Double> centroid, TupleWrapper tupleWrapper) {
         this.centroid = centroid;
         this.tuples = new ArrayList<>();
-        this.maxDistance = 0;
+        this.radius = 0;
         this.distance = new EuclideanDistance();
         this.tupleWrapper = tupleWrapper;
+        counter += 1;
+        this.i = counter;
+    }
+
+    public int getI() {
+        return this.i;
+    }
+
+    public double getRadius() {
+        return this.radius;
     }
 
     public List<Double> getCentroid() {
@@ -29,8 +41,8 @@ class Cluster {
     public void addTuple(Tuple tuple) {
         this.tuples.add(tuple);
         double distance = this.distance.calculate(centroid, this.tupleWrapper.getCoordinates(tuple));
-        if (distance > this.maxDistance) {
-            this.maxDistance = distance;
+        if (distance > this.radius) {
+            this.radius = distance;
         }
     }
 
