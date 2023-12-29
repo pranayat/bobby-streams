@@ -2,9 +2,50 @@ package aqp;
 
 import org.apache.storm.tuple.Tuple;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
-import static java.util.stream.Collectors.toList;
+class Cluster {
+    List<Double> centroid;
+    List<Tuple> tuples;
+    double maxDistance;
+    Distance distance;
+    TupleWrapper tupleWrapper;
+
+    Cluster(List<Double> centroid, TupleWrapper tupleWrapper) {
+        this.centroid = centroid;
+        this.tuples = new ArrayList<>();
+        this.maxDistance = 0;
+        this.distance = new EuclideanDistance();
+        this.tupleWrapper = tupleWrapper;
+    }
+
+    public List<Double> getCentroid() {
+        return this.centroid;
+    }
+
+    public void addTuple(Tuple tuple) {
+        this.tuples.add(tuple);
+        double distance = this.distance.calculate(centroid, this.tupleWrapper.getCoordinates(tuple));
+        if (distance > this.maxDistance) {
+            this.maxDistance = distance;
+        }
+    }
+
+    public List<Tuple> getTuples() {
+        return this.tuples;
+    }
+
+    public int getTupleCount() {
+        return this.tuples.size();
+    }
+
+    public void setCentroid(List<Double> centroid) {
+        this.centroid = centroid;
+    }
+}
 
 public class ClusterMaker {
     TupleWrapper tupleWrapper;
@@ -17,45 +58,22 @@ public class ClusterMaker {
         this.random = new Random();
     }
 
-    private List<List<Double>> relocateCentroids(Map<List<Double>, List<Tuple>> clusters) {
-        return clusters.entrySet().stream().map(e -> average(e.getKey(), e.getValue())).collect(toList());
-    }
-
-    private List<Double> average(List<Double> centroid, List<Tuple> tuples) {
-        if (tuples == null || tuples.isEmpty()) {
-            return centroid;
-        }
-
+    private void recomputeClusterCentroids(List<Cluster> clusters) {
         int dimensions = this.tupleWrapper.getDimensions();
-        List<Double> average = new ArrayList<>(Collections.nCopies(dimensions, 0.0));
-
-        for (Tuple tuple : tuples) {
-            List<Double> coordinates = this.tupleWrapper.getCoordinates(tuple);
-            for (int i = 0; i < dimensions; i++) {
-                average.set(i, average.get(i) + coordinates.get(i));
+        for (Cluster cluster : clusters) {
+            List<Double> newCentroid = new ArrayList<>(Collections.nCopies(dimensions, 0.0));
+            for (Tuple tuple : cluster.getTuples()) {
+                for (int i = 0; i < dimensions; i++) {
+                    newCentroid.set(i, newCentroid.get(i) + this.tupleWrapper.getCoordinates(tuple).get(i));
+                }
             }
+            newCentroid.replaceAll(v -> v / cluster.getTupleCount());
+            cluster.setCentroid(newCentroid);
         }
-
-        average.replaceAll(v -> v / tuples.size());
-
-        return average;
     }
 
-    private void assignToCluster(Map<List<Double>, List<Tuple>> clusters,
-                                 Tuple record,
-                                 List<Double> centroid) {
-        clusters.compute(centroid, (key, list) -> {
-            if (list == null) {
-                list = new ArrayList<>();
-            }
-
-            list.add(record);
-            return list;
-        });
-    }
-
-    private List<List<Double>> randomCentroids(List<Tuple> tuples, int k) {
-        List<List<Double>> centroids = new ArrayList<>();
+    private List<Cluster> randomClusters(List<Tuple> tuples, int k) {
+        List<Cluster> clusters = new ArrayList<>();
         int dimensions = this.tupleWrapper.getDimensions();
         List<Double> maxs = new ArrayList<>(Collections.nCopies(dimensions, (Double) null));
         List<Double> mins = new ArrayList<>(Collections.nCopies(dimensions, (Double) null));
@@ -81,35 +99,34 @@ public class ClusterMaker {
                 coordinates.add(this.random.nextDouble() * (max - min) + min);
             }
 
-            centroids.add(coordinates);
+            clusters.add(new Cluster(coordinates, this.tupleWrapper));
         }
 
-        return centroids;
+        return clusters;
     }
 
-    private List<Double> nearestCentroid(Tuple tuple, List<List<Double>> centroids) {
+    private void assignToNearestCluster(Tuple tuple, List<Cluster> clusters) {
         double minimumDistance = Double.MAX_VALUE;
-        List<Double> nearest = null;
+        Cluster nearest = null;
 
-        for (List<Double> centroid : centroids) {
-            double currentDistance = this.distance.calculate(this.tupleWrapper.getCoordinates(tuple), centroid);
+        for (Cluster cluster : clusters) {
+            double currentDistance = this.distance.calculate(this.tupleWrapper.getCoordinates(tuple), cluster.getCentroid());
 
             if (currentDistance < minimumDistance) {
                 minimumDistance = currentDistance;
-                nearest = centroid;
+                nearest = cluster;
             }
         }
 
-        return nearest;
+        nearest.addTuple(tuple);
     }
 
-    public Map<List<Double>, List<Tuple>> fit(List<Tuple> tuples,
-                                              int k,
-                                              int maxIterations) {
+    public List<Cluster> fit(List<Tuple> tuples,
+                             int k,
+                             int maxIterations) {
 
-        List<List<Double>> centroids = randomCentroids(tuples, k);
-        Map<List<Double>, List<Tuple>> clusters = new LinkedHashMap<>();
-        Map<List<Double>, List<Tuple>> lastState = new HashMap<>();
+        List<Cluster> clusters = randomClusters(tuples, k);
+        List<Cluster> lastState = new ArrayList<>();
 
         // iterate for a pre-defined number of times
         for (int i = 0; i < maxIterations; i++) {
@@ -120,8 +137,7 @@ public class ClusterMaker {
                 if (this.tupleWrapper.isQuery(tuple)) {
                     continue;
                 }
-                List<Double> centroid = nearestCentroid(tuple, centroids);
-                assignToCluster(clusters, tuple, centroid);
+                assignToNearestCluster(tuple, clusters);
             }
 
             // if the assignments do not change, then the algorithm terminates
@@ -131,9 +147,7 @@ public class ClusterMaker {
                 break;
             }
 
-            // at the end of each iteration we should relocate the centroids
-            centroids = relocateCentroids(clusters);
-            clusters = new HashMap<>();
+            recomputeClusterCentroids(clusters);
         }
 
         return lastState;

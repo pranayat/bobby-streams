@@ -40,15 +40,15 @@ public class CubeBolt extends BaseWindowedBolt {
         List<String> joinIndex = this.joinIndices.get(0);
         TupleWrapper tupleWrapper = new TupleWrapper(joinIndex);
         ClusterMaker clusterMaker = new ClusterMaker(tupleWrapper);
-        Map<List<Double>, List<Tuple>> clusters = clusterMaker.fit(inputWindow.get(), 3, 100);
+        List<Cluster> clusters = clusterMaker.fit(inputWindow.get(), 3, 100);
         this.bPlusTree = new BPlusTree(512);
 
         int i = 1;
         int c = 100000;
         Distance distance = new EuclideanDistance();
-        for (Map.Entry<List<Double>, List<Tuple>> cluster : clusters.entrySet()) {
-            for (Tuple tuple : cluster.getValue()) {
-                this.bPlusTree.insert(i * c + distance.calculate(cluster.getKey(), tupleWrapper.getCoordinates(tuple)), tuple);
+        for (Cluster cluster : clusters) {
+            for (Tuple tuple : cluster.getTuples()) {
+                this.bPlusTree.insert(i * c + distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
             }
             i += 1;
         }
