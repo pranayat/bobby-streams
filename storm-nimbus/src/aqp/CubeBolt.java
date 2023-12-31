@@ -11,7 +11,6 @@ import org.apache.storm.windowing.TupleWindow;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class CubeBolt extends BaseWindowedBolt {
     OutputCollector _collector;
@@ -48,7 +47,11 @@ public class CubeBolt extends BaseWindowedBolt {
 
         int c = 100000;
         Distance distance = new EuclideanDistance();
+        List<List<Tuple>> joinResults = new ArrayList<List<Tuple>>();
         for (Tuple tuple : inputWindow.get()) {
+            if (tuple.getSourceStreamId().equals("query")) {
+                continue;
+            }
             List<Tuple> joinCandidates = new ArrayList<>();
             for (Cluster cluster : clusters) {
                 double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
@@ -71,14 +74,20 @@ public class CubeBolt extends BaseWindowedBolt {
                             cluster.getI() * c + cluster.getRadius()));
                 }
 
-                // don't join with the same stream
-                List<Tuple> filteredList = joinCandidates.stream()
-                        .filter(joinCandidate -> !tuple.getSourceStreamId().equals(joinCandidate.getSourceStreamId()))
-                        .collect(Collectors.toList());
-
                 this.bPlusTree.insert(cluster.getI() * c + distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
             }
+
+            for (Tuple joinCandidate : joinCandidates) {
+                if (!joinCandidate.getSourceStreamId().equals(tuple.getSourceStreamId())) {
+                    List<Tuple> joinResult = new ArrayList<Tuple>(); // holds the join pair
+                    joinResult.add(tuple);
+                    joinResult.add(joinCandidate);
+                    joinResults.add(joinResult); // add join pair to result list
+                }
+            }
         }
+
+        System.out.println(joinResults);
     }
 
     @Override
