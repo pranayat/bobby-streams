@@ -13,16 +13,12 @@ public class TupleWrapper {
     }
 
     public List<Double> getCoordinates(Tuple tuple) {
-        List<Double> coordinates = new ArrayList<Double>();
+        List<Double> coordinates = new ArrayList<>();
         for (String column : coordinateColumns) {
             coordinates.add(tuple.getDoubleByField(column));
         }
 
         return coordinates;
-    }
-
-    public boolean isQuery(Tuple tuple) {
-        return tuple.getSourceStreamId().equals("query");
     }
 
     public int getDimensions() {
