@@ -16,9 +16,11 @@ import java.util.Map;
 public class GridBolt extends BaseRichBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
+    int cellSize;
 
     public GridBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
+        this.cellSize = 10; // TODO read this from config
     }
 
     private int[] calculateAdjacentCube(int[] cubeLabel, int index, int dimensions) {
@@ -39,9 +41,10 @@ public class GridBolt extends BaseRichBolt {
 
     private int[] getCube(Tuple tuple, List<String> joinColumns) {
         int dimensions = joinColumns.size();
+
         int[] cube = new int[dimensions];
         for (int i = 0; i < dimensions; i++) {
-            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / 10);
+            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / this.cellSize);
         }
 
         return cube;
@@ -69,32 +72,25 @@ public class GridBolt extends BaseRichBolt {
             TopologyContext topologyContext,
             OutputCollector collector) {
         _collector = collector;
-//        this.joinQueryCache = JoinQueryCache.getInstance();
     }
 
     @Override
     public void execute(Tuple input) {
-        if (!input.getSourceStreamId().equals("query")) {
-//            Set<Map.Entry<UUID, JoinQuery>> querySet = this.joinQueryCache.getAllElements();
-            List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
-            List<Object> values;
-            // emit tuple to hypercubes of different dimensions (for different join column combinations)
-            List<List<String>> joinIndices = this.schemaConfig.getJoinIndices();
-            for (List<String> joinColumns : joinIndices) {
-                for (int[] cube : this.getCubesForTuple(input, joinColumns)) {
-                    System.out.println("emitting to " + Arrays.toString(cube));
-                    values = new ArrayList<Object>();
-                    for (String field : fields) {
-                        values.add(input.getDoubleByField(field));
-                    }
-                    values.add(Arrays.toString(cube));
-
-                    _collector.emit(input.getSourceStreamId(), new Values(values.toArray()));
+        List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
+        List<Object> values;
+        // emit tuple to hypercubes of different dimensions (for different join column combinations)
+        List<List<String>> joinIndices = this.schemaConfig.getJoinIndices();
+        for (List<String> joinColumns : joinIndices) {
+            for (int[] cube : this.getCubesForTuple(input, joinColumns)) {
+                System.out.println("emitting to " + Arrays.toString(cube));
+                values = new ArrayList<Object>();
+                for (String field : fields) {
+                    values.add(input.getDoubleByField(field));
                 }
+                values.add(Arrays.toString(cube));
+
+                _collector.emit(input.getSourceStreamId(), new Values(values.toArray()));
             }
-        } else {
-//            this.joinQueryCache.put(new JoinQuery(input.getStringByField("streamIds").split(","), input.getStringByField("columns").split(","), input.getIntegerByField("distance")));
-            _collector.emit(input.getSourceStreamId(), new Values(input.getStringByField("streamIds"), input.getStringByField("columns"), input.getIntegerByField("distance")));
         }
     }
 

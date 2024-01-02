@@ -14,7 +14,6 @@ import java.util.Map;
 
 public class CubeBolt extends BaseWindowedBolt {
     OutputCollector _collector;
-    private JoinQueryCache joinQueryCache;
     private SchemaConfig schemaConfig;
     private List<List<String>> joinIndices;
     private BPlusTree bPlusTree;
@@ -31,7 +30,6 @@ public class CubeBolt extends BaseWindowedBolt {
             OutputCollector collector) {
         _collector = collector;
 
-        this.joinQueryCache = JoinQueryCache.getInstance();
     }
 
     @Override
@@ -40,8 +38,11 @@ public class CubeBolt extends BaseWindowedBolt {
         // TODO just dealing with lat,long index for now
         List<String> joinIndex = this.joinIndices.get(0);
         TupleWrapper tupleWrapper = new TupleWrapper(joinIndex);
-        ClusterMaker clusterMaker = new ClusterMaker(tupleWrapper);
-        List<Cluster> clusters = clusterMaker.fit(inputWindow.get(), 3, 100);
+//        ClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, 3, 100);
+        // TODO read cellSize from config
+        int cellSize = 10;
+        ClusterMaker clusterMaker = new GridClusterMaker(tupleWrapper, cellSize);
+        List<Cluster> clusters = clusterMaker.fit(inputWindow.get());
         this.bPlusTree = new BPlusTree(512);
         int joinRadius = 10;
 
@@ -49,9 +50,6 @@ public class CubeBolt extends BaseWindowedBolt {
         Distance distance = new EuclideanDistance();
         List<List<Tuple>> joinResults = new ArrayList<List<Tuple>>();
         for (Tuple tuple : inputWindow.get()) {
-            if (tuple.getSourceStreamId().equals("query")) {
-                continue;
-            }
             List<Tuple> joinCandidates = new ArrayList<>();
             for (Cluster cluster : clusters) {
                 double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
