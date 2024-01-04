@@ -5,10 +5,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public class SchemaConfig {
-    
+
     @JsonProperty("streams")
     private List<Stream> streams;
-    
+
     @JsonProperty("queries")
     private List<Query> queries;
 
@@ -19,11 +19,11 @@ public class SchemaConfig {
     }
 
     public Stream getStreamById(String streamId) {
-        Stream foundStream = streams.stream()
+        return streams.stream()
                 .filter(stream -> stream.getId().equals(streamId))
                 .findFirst()
                 .get();
-    }    
+    }
 
     public void setStreams(List<Stream> streams) {
         this.streams = streams;
@@ -39,10 +39,10 @@ public class SchemaConfig {
 }
 
 class Stream {
-    
+
     @JsonProperty("id")
     private String id;
-    
+
     @JsonProperty("fields")
     private List<String> fields;
 
@@ -66,10 +66,10 @@ class Stream {
 }
 
 class Query {
-    
+
     @JsonProperty("id")
     private String id;
-    
+
     @JsonProperty("stages")
     private List<Stage> stages;
 
@@ -93,16 +93,16 @@ class Query {
 }
 
 class Stage {
-    
+
     @JsonProperty("type")
     private String type;
-    
+
     @JsonProperty("between")
     private List<String> between;
-    
+
     @JsonProperty("on")
     private List<String> on;
-    
+
     @JsonProperty("max_distance")
     private int maxDistance;
 
