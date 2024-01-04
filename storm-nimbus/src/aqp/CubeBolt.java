@@ -15,12 +15,13 @@ import java.util.Map;
 public class CubeBolt extends BaseWindowedBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
-    private List<List<String>> joinIndices;
-    private BPlusTree bPlusTree;
+    List<JoinQuery> joinQueries;
+    List<Grid> grids;
 
     public CubeBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
-        this.joinIndices = this.schemaConfig.getJoinIndices();
+        this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
+        this.grids = GridBuilder.build(this.joinQueries);
     }
 
     @Override
@@ -35,57 +36,69 @@ public class CubeBolt extends BaseWindowedBolt {
     @Override
     public void execute(TupleWindow inputWindow) {
 
-        // TODO just dealing with lat,long index for now
-        List<String> joinIndex = this.joinIndices.get(0);
-        TupleWrapper tupleWrapper = new TupleWrapper(joinIndex);
-//        ClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, 3, 100);
-        // TODO read cellSize from config
-        int cellSize = 10;
-        ClusterMaker clusterMaker = new GridClusterMaker(tupleWrapper, cellSize);
-        List<Cluster> clusters = clusterMaker.fit(inputWindow.get());
-        this.bPlusTree = new BPlusTree(512);
-        int joinRadius = 10;
+        for (Grid grid: this.grids) {
+            TupleWrapper tupleWrapper = new TupleWrapper(grid.getAxisNames());
+            ClusterMaker clusterMaker = new GridClusterMaker(tupleWrapper, grid.getCellLength());
+            //        ClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, 3, 100);
+            List<Cluster> clusters = clusterMaker.fit(inputWindow.get());
+            grid.setClusters(clusters);
+            grid.setBPlusTree(new BPlusTree(512));
+        }
 
         int c = 100000;
         Distance distance = new EuclideanDistance();
-        List<List<Tuple>> joinResults = new ArrayList<List<Tuple>>();
         for (Tuple tuple : inputWindow.get()) {
-            List<Tuple> joinCandidates = new ArrayList<>();
-            for (Cluster cluster : clusters) {
-                double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
-                /* if tuple is inside cluster sphere
-                then search between i * c + dist(O_i, q) - join_radius
-                and
-                min(i * c + dist_max_i, i * c + dist(O_i,q) + join_radius)
-                 */
-                if (queryTupleToCentroidDistance < cluster.getRadius()) {
-                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinRadius,
-                            Math.min(cluster.getI() * c + cluster.getRadius(), cluster.getI() * c + queryTupleToCentroidDistance + joinRadius)));
-                }
-                /* tuple is outside the cluster sphere but its query sphere intersects the cluster sphere
-                then search between i * c + dist(O_i, q) - join_radius
-                and
-                i * c + dist(O_i, dist_max_i)
-                 */
-                else if (queryTupleToCentroidDistance < cluster.getRadius() + joinRadius) {
-                    joinCandidates.addAll(this.bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinRadius,
-                            cluster.getI() * c + cluster.getRadius()));
+            String tupleStreamId = input.getSourceStreamId();
+            for (Grid grid: this.grids) {
+                if (!grid.isMemberStream(tupleStreamId)) {
+                    continue;
                 }
 
-                this.bPlusTree.insert(cluster.getI() * c + distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
-            }
+                Cluster closestCluster;
+                double closestClusterDistance = -1;
+                BPlusTree bPlusTree = grid.getBPlusTree();
+                for (Cluster cluster : grid.getClusters()) {
+                    double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
 
-            for (Tuple joinCandidate : joinCandidates) {
-                if (!joinCandidate.getSourceStreamId().equals(tuple.getSourceStreamId())) {
-                    List<Tuple> joinResult = new ArrayList<Tuple>(); // holds the join pair
-                    joinResult.add(tuple);
-                    joinResult.add(joinCandidate);
-                    joinResults.add(joinResult); // add join pair to result list
+                    for (JoinQuery joinQuery: grid.getJoinQueries()) {
+                        List<Tuple> joinCandidates = new ArrayList<>();
+                        /* if tuple is inside cluster sphere
+                        then search between i * c + dist(O_i, q) - join_radius
+                        and
+                        min(i * c + dist_max_i, i * c + dist(O_i,q) + join_radius)
+                        */
+                        if (queryTupleToCentroidDistance < cluster.getRadius()) {
+                            joinCandidates.addAll(bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinQuery.getRadius(),
+                                    Math.min(cluster.getI() * c + cluster.getRadius(), cluster.getI() * c + queryTupleToCentroidDistance + joinQuery.getRadius())));
+                        }
+                        /* tuple is outside the cluster sphere but its query sphere intersects the cluster sphere
+                        then search between i * c + dist(O_i, q) - join_radius
+                        and
+                        i * c + dist(O_i, dist_max_i)
+                        */
+                        else if (queryTupleToCentroidDistance < cluster.getRadius() + joinQuery.getRadius()) {
+                            joinCandidates.addAll(bPlusTree.search(cluster.getI() * c + queryTupleToCentroidDistance - joinQuery.getRadius(),
+                                    cluster.getI() * c + cluster.getRadius()));
+                        }
+
+                        for (Tuple joinCandidate : joinCandidates) {
+                            List<Tuple> joinResult = new ArrayList<Tuple>(); // holds the join pair
+                            joinResult.add(tuple);
+                            joinResult.add(joinCandidate);
+                            joinQuery.addResult(joinResult); // add join pair to result list
+                        }
+                    }
+
+                    if (closestClusterDistance == -1 || queryTupleToCentroidDistance < closestClusterDistance) {
+                        closestClusterDistance = queryTupleToCentroidDistance;
+                        closestCluster = cluster;
+                    }
                 }
+                // insert tuple into B+tree by computing iDistance from closest cluster
+                bPlusTree.insert(closestCluster.getI() * c + distance.calculate(closestCluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
+                grid.setBPlusTree(bPlusTree);
             }
         }
-
-        System.out.println(joinResults);
     }
 
     @Override

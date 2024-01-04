@@ -20,14 +20,13 @@ public class AqpTopology {
         builder.setSpout("data", new DataSpout(), 1);
 
         BoltDeclarer bolt = builder.setBolt("grid", new GridBolt(), 1);
-        for (Map.Entry<String, List<String>> stream : schemaConfig.getStreams().entrySet()) {
-            bolt.shuffleGrouping("data", stream.getKey());
+        for (Stream stream : schemaConfig.getStreams()) {
+            bolt.shuffleGrouping("data", stream.getId());
         }
 
         bolt = builder.setBolt("cube", new CubeBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
-        for (Map.Entry<String, List<String>> stream : schemaConfig.getStreams().entrySet()) {
-            bolt.fieldsGrouping("grid", stream.getKey(), new Fields("cubeId"));
-//            bolt.allGrouping("grid", stream.getKey());
+        for (Stream stream : schemaConfig.getStreams()) {
+            bolt.fieldsGrouping("grid", stream.getId(), new Fields("cubeId"));
         }
 
         Config conf = new Config();

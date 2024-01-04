@@ -1,22 +1,94 @@
 {
-  "streams": {
-    "stream_1": [
-      "lat",
-      "long",
-      "alt",
-      "text"
-    ],
-    "stream_2": [
-      "lat",
-      "long",
-      "alt",
-      "text"
-    ]
-  },
-  "join_indices": [
-    [
-      "lat",
-      "long"
-    ]
+  "streams": [
+    {
+      "id": "stream_1",
+      "fields": [
+        "lat",
+        "long",
+        "alt"
+      ]
+    },
+    {
+      "id": "stream_2",
+      "fields": [
+        "lat",
+        "long",
+        "alt"
+      ]
+    },
+    {
+      "id": "stream_3",
+      "fields": [
+        "lat",
+        "long",
+        "alt"
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "query_1",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "long",
+            "alt"
+          ],
+          "max_distance": 1000
+        },
+        {
+          "type": "max",
+          "on": "velocity"
+        }
+      ]
+    },
+    {
+      "id": "query_1",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "long",
+            "alt"
+          ],
+          "max_distance": 2000
+        },
+        {
+          "type": "max",
+          "on": "velocity"
+        }
+      ]
+    },
+    {
+      "id": "query_3",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "long"
+          ],
+          "max_distance": 2000
+        }
+      ]
+    }
   ]
 }
