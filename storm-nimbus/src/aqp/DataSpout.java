@@ -46,9 +46,8 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        for (Map.Entry<String, List<String>> stream : this.schemaConfig.getStreams().entrySet()) {
-            List<String> fields = new ArrayList<String>(stream.getValue());
-            declarer.declareStream(stream.getKey(), new Fields(fields));
+        for (Stream stream : this.schemaConfig.getStreams()) {
+            declarer.declareStream(stream.getId(), new Fields(stream.getFields()));
         }
     }
 

@@ -20,6 +20,4 @@ public abstract class SchemaConfigBuilder {
 
         return schemaConfig;
     }
-
-
 }

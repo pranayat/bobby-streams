@@ -16,11 +16,13 @@ import java.util.Map;
 public class GridBolt extends BaseRichBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
-    int cellSize;
+    List<JoinQuery> joinQueries;
+    List<Grid> grids;
 
     public GridBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
-        this.cellSize = 10; // TODO read this from config
+        this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
+        this.grids = GridBuilder.build(this.joinQueries);
     }
 
     private int[] calculateAdjacentCube(int[] cubeLabel, int index, int dimensions) {
@@ -39,19 +41,19 @@ public class GridBolt extends BaseRichBolt {
         return adjacentCube;
     }
 
-    private int[] getCube(Tuple tuple, List<String> joinColumns) {
+    private int[] getCube(Tuple tuple, List<String> joinColumns, int cellSize) {
         int dimensions = joinColumns.size();
 
         int[] cube = new int[dimensions];
         for (int i = 0; i < dimensions; i++) {
-            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / this.cellSize);
+            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / cellSize);
         }
 
         return cube;
     }
 
-    private int[][] getCubesForTuple(Tuple tuple, List<String> joinColumns) {
-        int[] cube = getCube(tuple, joinColumns);
+    private int[][] getCubesForTuple(Tuple tuple, List<String> joinColumns, int cellSize) {
+        int[] cube = getCube(tuple, joinColumns, cellSize);
         int dimensions = joinColumns.size();
         int adjacentCount = (int) Math.pow(3, dimensions);
         int[][] allCubes = new int[adjacentCount + 1][dimensions];
@@ -76,32 +78,34 @@ public class GridBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
-        List<String> fields = this.schemaConfig.getStreamById(input.getSourceStreamId());
         List<Object> values;
-        // emit tuple to hypercubes of different dimensions (for different join column combinations)
-        List<List<String>> joinIndices = this.schemaConfig.getJoinIndices();
-        for (List<String> joinColumns : joinIndices) {
-            for (int[] cube : this.getCubesForTuple(input, joinColumns)) {
+        String tupleStreamId = input.getSourceStreamId();
+        Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
+
+        for (Grid grid : this.grids) {
+            if (!grid.isMemberStream(tupleStreamId)) {
+                continue;
+            }
+
+            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNames())) {
                 System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
-                for (String field : fields) {
+                for (String field : tupleStream.getFields()) {
                     values.add(input.getDoubleByField(field));
                 }
                 values.add(Arrays.toString(cube));
 
-                _collector.emit(input.getSourceStreamId(), new Values(values.toArray()));
+                _collector.emit(tupleStreamId, new Values(values.toArray()));
             }
         }
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        for (Map.Entry<String, List<String>> stream : this.schemaConfig.getStreams().entrySet()) {
-            List<String> fields = new ArrayList<String>(stream.getValue());
+        for (Stream stream : this.schemaConfig.getStreams()) {
+            List<String> fields = new ArrayList<String>(stream.getFields());
             fields.add("cubeId");
-            declarer.declareStream(stream.getKey(), new Fields(fields));
+            declarer.declareStream(stream.getId(), new Fields(fields));
         }
-
-        declarer.declareStream("query", new Fields("streamIds", "columns", "distance"));
     }
 }
