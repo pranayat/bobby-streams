@@ -44,7 +44,7 @@
             "long",
             "alt"
           ],
-          "max_distance": 1000
+          "radius": 1000
         },
         {
           "type": "max",
@@ -69,7 +69,7 @@
             "long",
             "alt"
           ],
-          "max_distance": 2000
+          "radius": 2000
         },
         {
           "type": "max",
@@ -93,7 +93,7 @@
             "lat",
             "long"
           ],
-          "max_distance": 2000
+          "radius": 2000
         }
       ]
     }

@@ -9,7 +9,7 @@ public abstract class JoinQueryBuilder {
         for (Query query : schemaConfig.getQueries()) {
             for (Stage stage : query.getStages()) {
                 if (stage.getType().equals("join")) {
-                    joinQueries.add(new JoinQuery(stage.getMaxDistance(), stage.getBetween(), stage.getOn()));
+                    joinQueries.add(new JoinQuery(stage.getRadius(), stage.getBetween(), stage.getOn()));
                 }
             }
         }
