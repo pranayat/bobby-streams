@@ -20,8 +20,6 @@ public class CubeBolt extends BaseWindowedBolt {
 
     public CubeBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
-        this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
-        this.grids = GridBuilder.build(this.joinQueries);
     }
 
     @Override
@@ -31,12 +29,14 @@ public class CubeBolt extends BaseWindowedBolt {
             OutputCollector collector) {
         _collector = collector;
 
+        this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
+        this.grids = GridBuilder.build(this.joinQueries);
     }
 
     @Override
     public void execute(TupleWindow inputWindow) {
 
-        for (Grid grid: this.grids) {
+        for (Grid grid : this.grids) {
             TupleWrapper tupleWrapper = new TupleWrapper(grid.getAxisNames());
             ClusterMaker clusterMaker = new GridClusterMaker(tupleWrapper, grid.getCellLength());
             //        ClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, 3, 100);
@@ -48,19 +48,20 @@ public class CubeBolt extends BaseWindowedBolt {
         int c = 100000;
         Distance distance = new EuclideanDistance();
         for (Tuple tuple : inputWindow.get()) {
-            String tupleStreamId = input.getSourceStreamId();
-            for (Grid grid: this.grids) {
+            String tupleStreamId = tuple.getSourceStreamId();
+            for (Grid grid : this.grids) {
                 if (!grid.isMemberStream(tupleStreamId)) {
                     continue;
                 }
 
-                Cluster closestCluster;
+                Cluster closestCluster = null;
                 double closestClusterDistance = -1;
+                TupleWrapper tupleWrapper = new TupleWrapper(grid.getAxisNames());
                 BPlusTree bPlusTree = grid.getBPlusTree();
                 for (Cluster cluster : grid.getClusters()) {
                     double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
 
-                    for (JoinQuery joinQuery: grid.getJoinQueries()) {
+                    for (JoinQuery joinQuery : grid.getJoinQueries()) {
                         List<Tuple> joinCandidates = new ArrayList<>();
                         /* if tuple is inside cluster sphere
                         then search between i * c + dist(O_i, q) - join_radius

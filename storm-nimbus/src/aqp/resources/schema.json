@@ -5,7 +5,8 @@
       "fields": [
         "lat",
         "long",
-        "alt"
+        "alt",
+        "text"
       ]
     },
     {
@@ -13,7 +14,8 @@
       "fields": [
         "lat",
         "long",
-        "alt"
+        "alt",
+        "text"
       ]
     },
     {
@@ -21,7 +23,8 @@
       "fields": [
         "lat",
         "long",
-        "alt"
+        "alt",
+        "text"
       ]
     }
   ],
@@ -45,7 +48,9 @@
         },
         {
           "type": "max",
-          "on": "velocity"
+          "on": [
+            "velocity"
+          ]
         }
       ]
     },
@@ -68,7 +73,9 @@
         },
         {
           "type": "max",
-          "on": "velocity"
+          "on": [
+            "velocity"
+          ]
         }
       ]
     },
