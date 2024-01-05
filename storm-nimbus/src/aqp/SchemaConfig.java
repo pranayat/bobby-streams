@@ -2,9 +2,10 @@ package aqp;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Serializable;
 import java.util.List;
 
-public class SchemaConfig {
+public class SchemaConfig implements Serializable {
 
     @JsonProperty("streams")
     private List<Stream> streams;
@@ -38,7 +39,7 @@ public class SchemaConfig {
     }
 }
 
-class Stream {
+class Stream implements Serializable {
 
     @JsonProperty("id")
     private String id;
@@ -65,7 +66,7 @@ class Stream {
     }
 }
 
-class Query {
+class Query implements Serializable {
 
     @JsonProperty("id")
     private String id;
@@ -92,7 +93,7 @@ class Query {
     }
 }
 
-class Stage {
+class Stage implements Serializable {
 
     @JsonProperty("type")
     private String type;

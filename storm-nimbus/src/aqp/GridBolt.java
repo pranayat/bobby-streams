@@ -21,6 +21,15 @@ public class GridBolt extends BaseRichBolt {
 
     public GridBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
+    }
+
+    @Override
+    public void prepare(
+            Map stormConfig,
+            TopologyContext topologyContext,
+            OutputCollector collector) {
+        _collector = collector;
+
         this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
         this.grids = GridBuilder.build(this.joinQueries);
     }
@@ -69,14 +78,6 @@ public class GridBolt extends BaseRichBolt {
     }
 
     @Override
-    public void prepare(
-            Map stormConfig,
-            TopologyContext topologyContext,
-            OutputCollector collector) {
-        _collector = collector;
-    }
-
-    @Override
     public void execute(Tuple input) {
         List<Object> values;
         String tupleStreamId = input.getSourceStreamId();
@@ -87,7 +88,7 @@ public class GridBolt extends BaseRichBolt {
                 continue;
             }
 
-            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNames())) {
+            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNames(), grid.getCellLength())) {
                 System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
                 for (String field : tupleStream.getFields()) {
