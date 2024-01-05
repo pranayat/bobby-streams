@@ -10,11 +10,14 @@ public class Grid {
     Set<String> streamIds;
     List<Cluster> clusters;
     BPlusTree bPlusTree;
+    String name;
 
     public Grid(List<String> axisNames) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
         this.axisNames = axisNames;
+        Collections.sort(this.axisNames);
+        this.name = this.axisNames.toString();
         this.streamIds = new HashSet<>();
         this.joinQueries = new ArrayList<>();
     }
@@ -27,7 +30,7 @@ public class Grid {
         this.joinQueries.add(joinQuery);
 
         if (joinQuery.getRadius() > this.maxJoinRadius) {
-            this.maxJoinRadius = maxJoinRadius;
+            this.maxJoinRadius = joinQuery.getRadius();
             this.cellLength = this.maxJoinRadius * 4;
         }
 
@@ -36,7 +39,7 @@ public class Grid {
         }
     }
 
-    public List<String> getAxisNames() {
+    public List<String> getAxisNamesSorted() {
         Collections.sort(this.axisNames);
         return this.axisNames;
     }
@@ -67,5 +70,9 @@ public class Grid {
 
     public void setBPlusTree(BPlusTree bPlusTree) {
         this.bPlusTree = bPlusTree;
+    }
+
+    public String getName() {
+        return this.name;
     }
 }

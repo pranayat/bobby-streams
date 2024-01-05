@@ -88,13 +88,15 @@ public class GridBolt extends BaseRichBolt {
                 continue;
             }
 
-            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNames(), grid.getCellLength())) {
+            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNamesSorted(), grid.getCellLength())) {
                 System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
                 for (String field : tupleStream.getFields()) {
                     values.add(input.getDoubleByField(field));
                 }
+
                 values.add(Arrays.toString(cube));
+                values.add(grid.getName());
 
                 _collector.emit(tupleStreamId, new Values(values.toArray()));
             }
@@ -106,6 +108,7 @@ public class GridBolt extends BaseRichBolt {
         for (Stream stream : this.schemaConfig.getStreams()) {
             List<String> fields = new ArrayList<String>(stream.getFields());
             fields.add("cubeId");
+            fields.add("gridName");
             declarer.declareStream(stream.getId(), new Fields(fields));
         }
     }

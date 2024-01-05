@@ -104,8 +104,8 @@ class Stage implements Serializable {
     @JsonProperty("on")
     private List<String> on;
 
-    @JsonProperty("max_distance")
-    private int maxDistance;
+    @JsonProperty("radius")
+    private int radius;
 
     // Add getters and setters
 
@@ -133,11 +133,11 @@ class Stage implements Serializable {
         this.on = on;
     }
 
-    public int getMaxDistance() {
-        return maxDistance;
+    public int getRadius() {
+        return radius;
     }
 
-    public void setMaxDistance(int maxDistance) {
-        this.maxDistance = maxDistance;
+    public void setRadius(int radius) {
+        this.radius = radius;
     }
 }

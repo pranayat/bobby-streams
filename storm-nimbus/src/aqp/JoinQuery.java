@@ -28,7 +28,8 @@ public class JoinQuery {
         return this.streamIds;
     }
 
-    public List<String> getFields() {
+    public List<String> getFieldsSorted() {
+        Collections.sort(this.fields);
         return this.fields;
     }
 
