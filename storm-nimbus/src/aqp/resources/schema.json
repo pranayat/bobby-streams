@@ -53,49 +53,6 @@
           ]
         }
       ]
-    },
-    {
-      "id": "query_1",
-      "stages": [
-        {
-          "type": "join",
-          "between": [
-            "stream_1",
-            "stream_2",
-            "stream_3"
-          ],
-          "on": [
-            "lat",
-            "long",
-            "alt"
-          ],
-          "radius": 2000
-        },
-        {
-          "type": "max",
-          "on": [
-            "velocity"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "query_3",
-      "stages": [
-        {
-          "type": "join",
-          "between": [
-            "stream_1",
-            "stream_2",
-            "stream_3"
-          ],
-          "on": [
-            "lat",
-            "long"
-          ],
-          "radius": 2000
-        }
-      ]
     }
   ]
 }

@@ -38,7 +38,7 @@ RUN rm "$DISTRO_NAME.tar.gz";
 
 ENV PATH $PATH:/$DISTRO_NAME/bin
 
-# ADD storm.yaml /conf
+#ADD storm.yaml /conf
 
 RUN chown -R "$STORM_USER" "$STORM_CONF_DIR" "$STORM_DATA_DIR" "$STORM_LOG_DIR"
 
@@ -48,7 +48,7 @@ RUN chown -R "$STORM_USER" "$STORM_CONF_DIR" "$STORM_DATA_DIR" "$STORM_LOG_DIR"
 ENV MAVEN_VERSION="3.8.8"
 
 RUN cd / && \
-    wget "http://www.apache.org/dist/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz" && \
+    wget "https://downloads.apache.org/maven/maven-3/$MAVEN_VERSION/binaries/apache-maven-$MAVEN_VERSION-bin.tar.gz" && \
     tar -zxvf "apache-maven-$MAVEN_VERSION-bin.tar.gz"
 ENV PATH $PATH:/apache-maven-$MAVEN_VERSION/bin
 
