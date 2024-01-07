@@ -11,10 +11,12 @@ public class Grid {
     List<Cluster> clusters;
     BPlusTree bPlusTree;
     String name;
+    int c;
 
     public Grid(List<String> axisNames) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
+        this.c = 10000;
         this.axisNames = axisNames;
         Collections.sort(this.axisNames);
         this.name = this.axisNames.toString();
@@ -26,6 +28,10 @@ public class Grid {
         return this.cellLength;
     }
 
+    public int getC() {
+        return this.c;
+    }
+    
     public void registerJoinQuery(JoinQuery joinQuery) {
         this.joinQueries.add(joinQuery);
 

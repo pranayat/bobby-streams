@@ -7,8 +7,6 @@ import org.apache.storm.topology.base.BaseRichSpout;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -36,6 +34,7 @@ public class DataSpout extends BaseRichSpout {
 
         collector.emit("stream_1", new Values(latitude, longitude, altitude, text));
         collector.emit("stream_2", new Values(latitude, longitude, altitude, text));
+        collector.emit("stream_3", new Values(latitude, longitude, altitude, text));
 
         try {
             Thread.sleep(1000);

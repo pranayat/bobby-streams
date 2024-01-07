@@ -8,9 +8,6 @@ import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.base.BaseWindowedBolt;
 import org.apache.storm.tuple.Fields;
 
-import java.util.List;
-import java.util.Map;
-
 public class AqpTopology {
     public static void main(String[] args) throws Exception {
 
@@ -55,8 +52,8 @@ public class AqpTopology {
             // submit the topology to the local cluster
             cluster.submitTopology("aqp", conf, builder.createTopology());
 
-            // let the topology run for 20 seconds. note topologies never terminate!
-//            Thread.sleep(200000);
+            // let the topology run for 100 minutes. note topologies never terminate!
+            Thread.sleep(6000000);
 
 //            cluster.killTopology("aqp");
 
