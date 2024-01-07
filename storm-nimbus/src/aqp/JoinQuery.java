@@ -116,6 +116,7 @@ public class JoinQuery {
 
         // we found join partners [B1, B2, B3, C1, C2, D1, D2, D3, D4] for tuple A1
         // add [A1, B1, B2, B3, C1, C2, D1, D2, D3, D4] to query result
+        // in result, the first tuple A1 will be the tuple in the bolt window currently being joined, the rest will be the found join partners in other streams
         this.results.add(result);
     }
 }
