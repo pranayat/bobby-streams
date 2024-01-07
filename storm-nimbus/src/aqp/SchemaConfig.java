@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class SchemaConfig implements Serializable {
 
@@ -45,7 +46,7 @@ class Stream implements Serializable {
     private String id;
 
     @JsonProperty("fields")
-    private List<String> fields;
+    private List<Field> fields;
 
     // Add getters and setters
 
@@ -57,12 +58,34 @@ class Stream implements Serializable {
         this.id = id;
     }
 
-    public List<String> getFields() {
+    public List<Field> getFields() {
         return fields;
     }
 
-    public void setFields(List<String> fields) {
+    public List<String> getFieldNames() {
+        return this.fields.stream()
+                .map(Field::getName)
+                .collect(Collectors.toList());
+    }
+
+    public void setFields(List<Field> fields) {
         this.fields = fields;
+    }
+}
+
+class Field implements Serializable {
+    @JsonProperty("name")
+    private String name;
+
+    @JsonProperty("type")
+    private String type;
+
+    public String getName() {
+        return this.name;
+    }
+
+    public String getType() {
+        return this.type;
     }
 }
 

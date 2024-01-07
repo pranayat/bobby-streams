@@ -3,28 +3,76 @@
     {
       "id": "stream_1",
       "fields": [
-        "lat",
-        "long",
-        "alt",
-        "text"
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "long",
+          "type": "double"
+        },
+        {
+          "name": "alt",
+          "type": "double"
+        },
+        {
+          "name": "text",
+          "type": "double"
+        }
       ]
     },
     {
       "id": "stream_2",
       "fields": [
-        "lat",
-        "long",
-        "alt",
-        "text"
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "long",
+          "type": "double"
+        },
+        {
+          "name": "alt",
+          "type": "double"
+        },
+        {
+          "name": "text",
+          "type": "double"
+        }
       ]
     },
     {
       "id": "stream_3",
       "fields": [
-        "lat",
-        "long",
-        "alt",
-        "text"
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "long",
+          "type": "double"
+        },
+        {
+          "name": "alt",
+          "type": "double"
+        },
+        {
+          "name": "text",
+          "type": "double"
+        }
       ]
     }
   ],
@@ -44,7 +92,7 @@
             "long",
             "alt"
           ],
-          "radius": 1000
+          "radius": 100
         },
         {
           "type": "max",

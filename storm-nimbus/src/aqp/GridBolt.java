@@ -83,6 +83,7 @@ public class GridBolt extends BaseRichBolt {
         String tupleStreamId = input.getSourceStreamId();
         Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
 
+
         for (Grid grid : this.grids) {
             if (!grid.isMemberStream(tupleStreamId)) {
                 continue;
@@ -91,8 +92,12 @@ public class GridBolt extends BaseRichBolt {
             for (int[] cube : this.getCubesForTuple(input, grid.getAxisNamesSorted(), grid.getCellLength())) {
                 System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
-                for (String field : tupleStream.getFields()) {
-                    values.add(input.getDoubleByField(field));
+                for (Field field : tupleStream.getFields()) {
+                    if (field.getType().equals("double")) {
+                        values.add(input.getDoubleByField(field.getName()));
+                    } else {
+                        values.add(input.getStringByField(field.getName()));
+                    }
                 }
 
                 values.add(Arrays.toString(cube));
@@ -106,7 +111,7 @@ public class GridBolt extends BaseRichBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Stream stream : this.schemaConfig.getStreams()) {
-            List<String> fields = new ArrayList<String>(stream.getFields());
+            List<String> fields = new ArrayList<String>(stream.getFieldNames());
             fields.add("cubeId");
             fields.add("gridName");
             declarer.declareStream(stream.getId(), new Fields(fields));

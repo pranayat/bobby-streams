@@ -9,6 +9,7 @@ import org.apache.storm.tuple.Values;
 
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 public class DataSpout extends BaseRichSpout {
     private SpoutOutputCollector collector;
@@ -32,9 +33,9 @@ public class DataSpout extends BaseRichSpout {
         double altitude = generateRandomCoordinate(1000, 50000);
         double text = generateRandomDouble();
 
-        collector.emit("stream_1", new Values(latitude, longitude, altitude, text));
-        collector.emit("stream_2", new Values(latitude, longitude, altitude, text));
-        collector.emit("stream_3", new Values(latitude, longitude, altitude, text));
+        collector.emit("stream_1", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
+        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
+        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
 
         try {
             Thread.sleep(1000);
@@ -46,7 +47,7 @@ public class DataSpout extends BaseRichSpout {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Stream stream : this.schemaConfig.getStreams()) {
-            declarer.declareStream(stream.getId(), new Fields(stream.getFields()));
+            declarer.declareStream(stream.getId(), new Fields(stream.getFieldNames()));
         }
     }
 
