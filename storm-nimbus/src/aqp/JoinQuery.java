@@ -93,12 +93,10 @@ public class JoinQuery {
         return result;
     }
 
-    public void execute(Tuple tuple, Grid grid) {
+    public List<Tuple> execute(Tuple tuple, Grid grid) {
         // remove tuple's stream to prevent joins within streams
-        List<String> unjoinedStreams = new ArrayList<>();
-        unjoinedStreams.addAll(this.streamIds.stream()
-                .filter(s -> !s.equals(tuple.getSourceStreamId()))
-                .collect(Collectors.toList()));
+        List<String> unjoinedStreams = this.streamIds.stream()
+                .filter(s -> !s.equals(tuple.getSourceStreamId())).collect(Collectors.toList());
 
         List<Tuple> leftTuplesToJoin = new ArrayList<>();
         leftTuplesToJoin.add(tuple);
@@ -113,7 +111,7 @@ public class JoinQuery {
                 List<Tuple> joinPartners = this.findJoinPartnersInStream(leftTuple, grid, streamToJoin);
                 // every single tuple A1, B1, B2 should find a join partner in stream C, else abort and return early
                 if (joinPartners.size() == 0) {
-                    return;
+                    return new ArrayList<>();
                 }
                 partnerTuplesPerLeftTuple.add(joinPartners);
             }
@@ -121,8 +119,8 @@ public class JoinQuery {
             // C1 is common across join partners [C1, C2], [C1, C3], [C1, C4] of tuples A1, B1 and B2
             List<Tuple> commonJoinPartners = this.findIntersection(partnerTuplesPerLeftTuple);
             if (commonJoinPartners.size() == 0) {
-                // if no common join partners then abort and return early
-                return;
+                // if no common join partners then abort and return
+                return new ArrayList<>();
             }
             // these join results will now be joined with the remaining streams
             // eg. [A1, B1, B2, C1] will join tuples from stream D next
@@ -132,9 +130,6 @@ public class JoinQuery {
         // we found join partners [B1, B2, B3, C1, D1, D2, D3, D4] for tuple A1
         // add [A1, B1, B2, B3, C1, C2, D1, D2, D3, D4] to query result
         // in result, the first tuple A1 will be the tuple in the bolt window currently being joined, the rest will be the found join partners in other streams
-        List<Tuple> result = new ArrayList<>();
-        result.addAll(leftTuplesToJoin);
-
-        this.results.add(result);
+        return leftTuplesToJoin;
     }
 }
