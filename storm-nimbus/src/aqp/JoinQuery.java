@@ -80,6 +80,19 @@ public class JoinQuery {
         return joinCandidatesFromOtherStreams;
     }
 
+    private List<Tuple> findIntersection(List<List<Tuple>> listOfTupleLists) {
+        List<Tuple> result = new ArrayList<>();
+        for (List<Tuple> tupleList : listOfTupleLists) {
+            if (result.size() == 0) {
+                result.addAll(tupleList);
+            } else {
+                result.retainAll(tupleList);
+            }
+        }
+
+        return result;
+    }
+
     public void execute(Tuple tuple, Grid grid) {
         // remove tuple's stream to prevent joins within streams
         List<String> unjoinedStreams = new ArrayList<>();
@@ -93,30 +106,35 @@ public class JoinQuery {
         while (unjoinedStreams.size() > 0) {
             // join stream C now (assuming already joined [A1] with stream B in previous loop to get [A1, B1, B2])
             String streamToJoin = unjoinedStreams.remove(unjoinedStreams.size() - 1);
-            List<Tuple> partnerTuples = new ArrayList<>();
+            List<List<Tuple>> partnerTuplesPerLeftTuple = new ArrayList<>();
             // [A1, B1, B2] will be joined with tuples in stream C
             for (Tuple leftTuple : leftTuplesToJoin) {
-                // we found [C1, C2, C3, C4] join partners for [A1, B1, B2]
+                // we found [C1, C2], [C1, C3], [C1, C4] join partners for A1, B1 and B2 respectively
                 List<Tuple> joinPartners = this.findJoinPartnersInStream(leftTuple, grid, streamToJoin);
-                // every single tuple [A1, B1, B2] should find a join partner in stream C, else return
+                // every single tuple A1, B1, B2 should find a join partner in stream C, else abort and return early
                 if (joinPartners.size() == 0) {
                     return;
                 }
-                partnerTuples.addAll(joinPartners);
+                partnerTuplesPerLeftTuple.add(joinPartners);
             }
 
+            // C1 is common across join partners [C1, C2], [C1, C3], [C1, C4] of tuples A1, B1 and B2
+            List<Tuple> commonJoinPartners = this.findIntersection(partnerTuplesPerLeftTuple);
+            if (commonJoinPartners.size() == 0) {
+                // if no common join partners then abort and return early
+                return;
+            }
             // these join results will now be joined with the remaining streams
-            // eg. [A1, B1, B2, B3] will join tuples from stream C next
-            leftTuplesToJoin.addAll(partnerTuples);
+            // eg. [A1, B1, B2, C1] will join tuples from stream D next
+            leftTuplesToJoin.addAll(commonJoinPartners);
         }
 
-
+        // we found join partners [B1, B2, B3, C1, D1, D2, D3, D4] for tuple A1
+        // add [A1, B1, B2, B3, C1, C2, D1, D2, D3, D4] to query result
+        // in result, the first tuple A1 will be the tuple in the bolt window currently being joined, the rest will be the found join partners in other streams
         List<Tuple> result = new ArrayList<>();
         result.addAll(leftTuplesToJoin);
 
-        // we found join partners [B1, B2, B3, C1, C2, D1, D2, D3, D4] for tuple A1
-        // add [A1, B1, B2, B3, C1, C2, D1, D2, D3, D4] to query result
-        // in result, the first tuple A1 will be the tuple in the bolt window currently being joined, the rest will be the found join partners in other streams
         this.results.add(result);
     }
 }
