@@ -39,6 +39,26 @@ public class CubeBolt extends BaseWindowedBolt {
                 .get();
     }
 
+    public Boolean isTupleInGridTree(Tuple tuple, Grid grid) {
+        Distance distance = new EuclideanDistance();
+        TupleWrapper tupleWrapper = new TupleWrapper(grid.getAxisNamesSorted());
+        BPlusTree bPlusTree = grid.getBPlusTree();
+
+        for (Cluster cluster : grid.getClusters()) {
+            double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+
+            // check for duplicates since we replicate tuples to adjacent cells
+            List<Tuple> existingTuples = bPlusTree.search(cluster.getI() * grid.getC() + queryTupleToCentroidDistance,
+                    cluster.getI() * grid.getC() + queryTupleToCentroidDistance);
+            // multiple tuples with different ids could have the same iDistance so check the tupleID as well
+            if (existingTuples.stream().anyMatch(t -> t.getStringByField("tupleId").equals(tuple.getStringByField("tupleId")))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void insertIntoGridTree(Tuple tuple, Grid grid) {
         Distance distance = new EuclideanDistance();
         Cluster closestCluster = null;
@@ -48,6 +68,7 @@ public class CubeBolt extends BaseWindowedBolt {
 
         for (Cluster cluster : grid.getClusters()) {
             double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+
             if (closestClusterDistance == -1 || queryTupleToCentroidDistance < closestClusterDistance) {
                 closestClusterDistance = queryTupleToCentroidDistance;
                 closestCluster = cluster;
@@ -55,7 +76,7 @@ public class CubeBolt extends BaseWindowedBolt {
         }
 
         // insert tuple into B+tree by computing iDistance from closest cluster
-        bPlusTree.insert(closestCluster.getI() * grid.getC() + distance.calculate(closestCluster.getCentroid(), tupleWrapper.getCoordinates(tuple)), tuple);
+        bPlusTree.insert(closestCluster.getI() * grid.getC() + closestClusterDistance, tuple);
         grid.setBPlusTree(bPlusTree);
     }
 
@@ -73,6 +94,11 @@ public class CubeBolt extends BaseWindowedBolt {
 
         for (Tuple tuple : inputWindow.get()) {
             Grid grid = this.getTupleGrid(tuple);
+
+            if (this.isTupleInGridTree(tuple, grid)) {
+                // already in tree and also hence already called joinQuery.execute on it
+                continue;
+            }
 
             for (JoinQuery joinQuery : grid.getJoinQueries()) {
                 joinQuery.execute(tuple, grid);
