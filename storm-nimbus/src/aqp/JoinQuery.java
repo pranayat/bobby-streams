@@ -46,7 +46,7 @@ public class JoinQuery {
         } else if (queryTupleToCentroidDistance < clusterRadius + this.getRadius()) {
             return QuerySpherePosition.INTERSECTS;
         } else {
-            return QuerySpherePosition.INTERSECTS;
+            return QuerySpherePosition.OUTSIDE;
         }
     }
 
