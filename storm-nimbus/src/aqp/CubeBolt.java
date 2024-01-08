@@ -6,8 +6,11 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseWindowedBolt;
 import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -101,8 +104,18 @@ public class CubeBolt extends BaseWindowedBolt {
             }
 
             for (JoinQuery joinQuery : grid.getJoinQueries()) {
-                joinQuery.execute(tuple, grid);
-                System.out.println(joinQuery);
+                List<Tuple> joinResults = joinQuery.execute(tuple, grid);
+                List<String> tupleIds = new ArrayList<>();
+                for (Tuple joinResult : joinResults) {
+                    tupleIds.add(joinResult.getStringByField("tupleId"));
+                }
+
+                Collections.sort(tupleIds);
+                String joinId = String.join("+", tupleIds);
+
+                for (Tuple joinResult : joinResults) {
+                    _collector.emit(new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getSourceStreamId()));
+                }
             }
 
             // index the tuple
@@ -112,6 +125,6 @@ public class CubeBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("cubeId", "lat", "long", "alt", "text"));
+        declarer.declare(new Fields("joinId", "tupleId", "streamId"));
     }
 }

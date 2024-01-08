@@ -90,7 +90,7 @@ public class GridBolt extends BaseRichBolt {
             }
 
             for (int[] cube : this.getCubesForTuple(input, grid.getAxisNamesSorted(), grid.getCellLength())) {
-                System.out.println("emitting to " + Arrays.toString(cube));
+//                System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
                 for (Field field : tupleStream.getFields()) {
                     if (field.getType().equals("double")) {
