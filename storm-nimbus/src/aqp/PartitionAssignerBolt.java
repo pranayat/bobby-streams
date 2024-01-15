@@ -14,7 +14,6 @@ import java.util.Map;
 public class PartitionAssignerBolt extends BaseRichBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
-    List<JoinQuery> joinQueries;
 
     public PartitionAssignerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();

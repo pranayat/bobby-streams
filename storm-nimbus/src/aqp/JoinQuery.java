@@ -63,6 +63,7 @@ public class JoinQuery {
                 case INSIDE:
                     joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
                             Math.min(cluster.getI() * queryGroup.getC() + cluster.getRadius(), cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance + this.getRadius())));
+                    break;
                 case INTERSECTS:
                     joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
                             cluster.getI() * queryGroup.getC() + cluster.getRadius()));

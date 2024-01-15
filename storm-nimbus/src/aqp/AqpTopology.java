@@ -17,16 +17,28 @@ public class AqpTopology {
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("data", new DataSpout(), 1);
 
-        BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
+        // use either this or kMeansClusterAssignerBolt, not both
+        // can have multiple instances as entire data is not needed for clustering
+        // BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
+        // for (Stream stream : schemaConfig.getStreams()) {
+        //     gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
+        // }
+
+        // should have only 1 instance
+        BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
         for (Stream stream : schemaConfig.getStreams()) {
-            gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
+            kMeansClusterAssignerBolt.allGrouping("data", stream.getId());
         }
 
+        // should have only 1 instance
         BoltDeclarer partitionAssignerBolt = builder.setBolt("partitionAssigner", new PartitionAssignerBolt(), 1);
         for (Stream stream : schemaConfig.getStreams()) {
-            partitionAssignerBolt.shuffleGrouping("gridCellAssigner", stream.getId());
+            // use either this or kMeansClusterAssignerBolt, not both
+            // partitionAssignerBolt.allGrouping("gridCellAssigner", stream.getId());
+            partitionAssignerBolt.allGrouping("kMeansClusterAssigner", stream.getId());
         }
 
+        // can have multiple instances, but not more than the number of clusters
         BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
         for (Stream stream : schemaConfig.getStreams()) {
             joinerBolt.fieldsGrouping("partitionAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
