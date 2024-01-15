@@ -2,7 +2,10 @@ package aqp;
 
 import org.apache.storm.tuple.Tuple;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Random;
 
 class Cluster {
     List<Double> centroid;
@@ -56,47 +59,21 @@ class Cluster {
     }
 }
 
-public interface ClusterMaker {
-    public List<Cluster> fit(List<Tuple> tuples);
-}
-
-class GridClusterMaker implements ClusterMaker {
+/*
+    TODO use the same one for k-means, cluster making should be simply a matter of assigning tuples to clusters
+    TODO and not actually doing any clustering here, tuples were already assigned clusterIds in GridCellAssignerBolt/KMeansClusterAssignerBolt
+ */
+class ClusterMaker {
     TupleWrapper tupleWrapper;
     int cellSize;
 
-    public GridClusterMaker(TupleWrapper tupleWrapper, int cellSize) {
+    public ClusterMaker(TupleWrapper tupleWrapper, int cellSize) {
         this.tupleWrapper = tupleWrapper;
         this.cellSize = cellSize;
     }
-
-    public List<Cluster> fit(List<Tuple> tuples) {
-        List<Cluster> clusters = new ArrayList<>();
-        Map<String, Cluster> clusterMap = new HashMap<>();
-
-        for (Tuple tuple : tuples) {
-            String cubeId = tuple.getStringByField("cubeId");
-            Cluster cluster = clusterMap.get(cubeId);
-
-            if (cluster != null) {
-                cluster.addTuple(tuple);
-            } else {
-                // TODO do this in gridbolt when computing cubeId ?
-                List<Double> coordinates = this.tupleWrapper.getCoordinates(tuple);
-                List<Double> centroid = new ArrayList<>();
-                for (Double coordinate : coordinates) {
-                    centroid.add((double) ((int) (coordinate / this.cellSize)) * this.cellSize + (this.cellSize / 2));
-                }
-                cluster = new Cluster(centroid, this.tupleWrapper);
-                cluster.addTuple(tuple);
-                clusterMap.put(cubeId, cluster);
-            }
-        }
-
-        return new ArrayList<Cluster>(clusterMap.values());
-    }
 }
 
-class KMeansClusterMaker implements ClusterMaker {
+class KMeansClusterMaker {
     TupleWrapper tupleWrapper;
     int k;
     int maxIterations;

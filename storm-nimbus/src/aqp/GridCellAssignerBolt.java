@@ -9,17 +9,16 @@ import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-public class GridBolt extends BaseRichBolt {
+public class GridCellAssignerBolt extends BaseRichBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
-    List<Grid> grids;
+    List<QueryGroup> queryGroups;
 
-    public GridBolt() {
+    public GridCellAssignerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -31,7 +30,7 @@ public class GridBolt extends BaseRichBolt {
         _collector = collector;
 
         this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
-        this.grids = GridBuilder.build(this.joinQueries);
+        this.queryGroups = QueryGroupBuilder.build(this.joinQueries);
     }
 
     private int[] calculateAdjacentCube(int[] cubeLabel, int index, int dimensions) {
@@ -50,30 +49,34 @@ public class GridBolt extends BaseRichBolt {
         return adjacentCube;
     }
 
-    private int[] getCube(Tuple tuple, List<String> joinColumns, int cellSize) {
+    private int[] getCube(Tuple tuple, List<String> joinColumns, int cellLength) {
         int dimensions = joinColumns.size();
 
         int[] cube = new int[dimensions];
         for (int i = 0; i < dimensions; i++) {
-            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / cellSize);
+            cube[i] = (int) (tuple.getDoubleByField(joinColumns.get(i)) / cellLength);
         }
 
         return cube;
     }
 
-    private int[][] getCubesForTuple(Tuple tuple, List<String> joinColumns, int cellSize) {
-        int[] cube = getCube(tuple, joinColumns, cellSize);
+    private int[][] getCubesForTuple(Tuple tuple, List<String> joinColumns, int cellLength) {
+        int[] cube = getCube(tuple, joinColumns, cellLength);
         int dimensions = joinColumns.size();
-        int adjacentCount = (int) Math.pow(3, dimensions);
-        int[][] allCubes = new int[adjacentCount + 1][dimensions];
+        // TODO handle replication in partition bolt, replicate only if clusters are in partition bolt and being assigned to different partitions
+//        int adjacentCount = (int) Math.pow(3, dimensions);
+//        int[][] allCubes = new int[adjacentCount + 1][dimensions];
 
-        int[] adjacentCube;
-        for (int i = 0; i < adjacentCount; i++) {
-            adjacentCube = this.calculateAdjacentCube(cube, i, dimensions);
-            allCubes[i] = adjacentCube;
-        }
-
-        allCubes[adjacentCount] = cube;
+//        int[] adjacentCube;
+//        for (int i = 0; i < adjacentCount; i++) {
+//            adjacentCube = this.calculateAdjacentCube(cube, i, dimensions);
+//            allCubes[i] = adjacentCube;
+//        }
+//
+//        allCubes[adjacentCount] = cube;
+//        return allCubes;
+        int[][] allCubes = new int[1][dimensions];
+        allCubes[0] = cube;
         return allCubes;
     }
 
@@ -84,12 +87,15 @@ public class GridBolt extends BaseRichBolt {
         Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
 
 
-        for (Grid grid : this.grids) {
-            if (!grid.isMemberStream(tupleStreamId)) {
+        for (QueryGroup queryGroup : this.queryGroups) {
+            // the tuple's stream is not relevant for this set of queries
+            if (!queryGroup.isMemberStream(tupleStreamId)) {
                 continue;
             }
 
-            for (int[] cube : this.getCubesForTuple(input, grid.getAxisNamesSorted(), grid.getCellLength())) {
+            // multiple cubes as it is replicated into adjacent cubes as well
+            // each cube is an int array [2,2]
+            for (int[] cubeLabel : this.getCubesForTuple(input, queryGroup.getAxisNamesSorted(), queryGroup.getCellLength())) {
 //                System.out.println("emitting to " + Arrays.toString(cube));
                 values = new ArrayList<Object>();
                 for (Field field : tupleStream.getFields()) {
@@ -100,9 +106,18 @@ public class GridBolt extends BaseRichBolt {
                     }
                 }
 
-                values.add(Arrays.toString(cube));
-                values.add(grid.getName());
+                TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
+                List<Double> coordinates = tupleWrapper.getCoordinates(input);
+                List<Double> centroid = new ArrayList<>();
+                // for cube [2,3] cell length 10 with centroid [2*10 + 10/2, 3*10 + 10/2 ][25, 35]
+                for (int axisOffset : cubeLabel) {
+                    centroid.add((double) (axisOffset * queryGroup.getCellLength() + queryGroup.getCellLength() / 2));
+                }
 
+                values.add(centroid.toString()); // cluster Id eg. (25, 35)
+                values.add(queryGroup.getName()); // query group Id eg. (lat, long)
+
+                // stream_1, (25,35) (lat,long) ...
                 _collector.emit(tupleStreamId, new Values(values.toArray()));
             }
         }
@@ -112,8 +127,8 @@ public class GridBolt extends BaseRichBolt {
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Stream stream : this.schemaConfig.getStreams()) {
             List<String> fields = new ArrayList<String>(stream.getFieldNames());
-            fields.add("cubeId");
-            fields.add("gridName");
+            fields.add("clusterId"); // centroid of cube in this case
+            fields.add("queryGroupName");
             declarer.declareStream(stream.getId(), new Fields(fields));
         }
     }

@@ -50,22 +50,22 @@ public class JoinQuery {
         }
     }
 
-    private List<Tuple> findJoinPartnersInStream(Tuple tuple, Grid grid, String streamToJoin) {
-        BPlusTree bPlusTree = grid.getBPlusTree();
-        TupleWrapper tupleWrapper = new TupleWrapper(grid.getAxisNamesSorted());
+    private List<Tuple> findJoinPartnersInStream(Tuple tuple, QueryGroup queryGroup, String streamToJoin) {
+        BPlusTree bPlusTree = queryGroup.getBPlusTree();
+        TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         Distance distance = new EuclideanDistance();
         List<Tuple> joinCandidates = new ArrayList<>();
 
-        for (Cluster cluster : grid.getClusters()) {
+        for (Cluster cluster : queryGroup.getClusterMap().values()) {
             double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
 
             switch (this.getQuerySpherePosition(queryTupleToCentroidDistance, cluster.getRadius())) {
                 case INSIDE:
-                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * grid.getC() + queryTupleToCentroidDistance - this.getRadius(),
-                            Math.min(cluster.getI() * grid.getC() + cluster.getRadius(), cluster.getI() * grid.getC() + queryTupleToCentroidDistance + this.getRadius())));
+                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
+                            Math.min(cluster.getI() * queryGroup.getC() + cluster.getRadius(), cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance + this.getRadius())));
                 case INTERSECTS:
-                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * grid.getC() + queryTupleToCentroidDistance - this.getRadius(),
-                            cluster.getI() * grid.getC() + cluster.getRadius()));
+                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
+                            cluster.getI() * queryGroup.getC() + cluster.getRadius()));
             }
         }
 
@@ -93,7 +93,7 @@ public class JoinQuery {
         return result;
     }
 
-    public List<Tuple> execute(Tuple tuple, Grid grid) {
+    public List<Tuple> execute(Tuple tuple, QueryGroup queryGroup) {
         // remove tuple's stream to prevent joins within streams
         List<String> unjoinedStreams = this.streamIds.stream()
                 .filter(s -> !s.equals(tuple.getSourceStreamId())).collect(Collectors.toList());
@@ -108,7 +108,7 @@ public class JoinQuery {
             // [A1, B1, B2] will be joined with tuples in stream C
             for (Tuple leftTuple : leftTuplesToJoin) {
                 // we found [C1, C2], [C1, C3], [C1, C4] join partners for A1, B1 and B2 respectively
-                List<Tuple> joinPartners = this.findJoinPartnersInStream(leftTuple, grid, streamToJoin);
+                List<Tuple> joinPartners = this.findJoinPartnersInStream(leftTuple, queryGroup, streamToJoin);
                 // every single tuple A1, B1, B2 should find a join partner in stream C, else abort and return early
                 if (joinPartners.size() == 0) {
                     return new ArrayList<>();
