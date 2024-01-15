@@ -13,17 +13,23 @@ public class AqpTopology {
 
         SchemaConfig schemaConfig = SchemaConfigBuilder.build();
 
+        // data -> gridCellAssigner -> partitionAssigner -> joiner
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("data", new DataSpout(), 1);
 
-        BoltDeclarer bolt = builder.setBolt("grid", new GridBolt(), 1);
+        BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
         for (Stream stream : schemaConfig.getStreams()) {
-            bolt.shuffleGrouping("data", stream.getId());
+            gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
         }
 
-        bolt = builder.setBolt("cube", new CubeBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
+        BoltDeclarer partitionAssignerBolt = builder.setBolt("partitionAssigner", new PartitionAssignerBolt(), 1);
         for (Stream stream : schemaConfig.getStreams()) {
-            bolt.fieldsGrouping("grid", stream.getId(), new Fields("cubeId"));
+            partitionAssignerBolt.shuffleGrouping("gridCellAssigner", stream.getId());
+        }
+
+        BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
+        for (Stream stream : schemaConfig.getStreams()) {
+            joinerBolt.fieldsGrouping("partitionAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
         }
 
         Config conf = new Config();
