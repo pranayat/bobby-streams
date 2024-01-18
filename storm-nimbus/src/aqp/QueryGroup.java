@@ -11,8 +11,8 @@ import java.util.*;
 // this means the clusters associated with this query group should have tuples belonging to streams 1, 2 and 3
 // and the clustering should be done using lat and long
 public class QueryGroup {
-    int cellLength;
-    int maxJoinRadius;
+    int cellLength; // TODO change to double
+    double maxJoinRadius;
     List<String> axisNames;
     List<JoinQuery> joinQueries;
     Set<String> streamIds;
@@ -20,8 +20,10 @@ public class QueryGroup {
     BPlusTree bPlusTree;
     String name;
     int c;
+    Distance distance;
+    IDistance iDistance;
 
-    public QueryGroup(List<String> axisNames) {
+    public QueryGroup(List<String> axisNames, Distance distance, IDistance iDistance) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
         this.c = 10000;
@@ -32,6 +34,8 @@ public class QueryGroup {
         this.joinQueries = new ArrayList<>();
         this.clusterMap = new HashMap<>();
         this.bPlusTree = new BPlusTree(512);
+        this.distance = distance;
+        this.iDistance = iDistance;
     }
 
     public int getCellLength() {
@@ -47,7 +51,7 @@ public class QueryGroup {
 
         if (joinQuery.getRadius() > this.maxJoinRadius) {
             this.maxJoinRadius = joinQuery.getRadius();
-            this.cellLength = this.maxJoinRadius * 4;
+            this.cellLength = (int) (this.maxJoinRadius * 4);
         }
 
         for (String streamId : joinQuery.getStreamIds()) {
@@ -58,6 +62,14 @@ public class QueryGroup {
     public List<String> getAxisNamesSorted() {
         Collections.sort(this.axisNames);
         return this.axisNames;
+    }
+
+    public Distance getDistance() {
+        return this.distance;
+    }
+
+    public IDistance getIDistance() {
+        return this.iDistance;
     }
 
     public Set<String> getStreamIds() {

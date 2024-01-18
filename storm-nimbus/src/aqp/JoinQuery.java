@@ -8,26 +8,24 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class JoinQuery {
-    int radius;
+    double radius;
     List<String> streamIds;
     List<String> fields;
     List<List<Tuple>> results;
+    Distance distance;
+    IDistance iDistance;
 
-    enum QuerySpherePosition {
-        INSIDE,
-        INTERSECTS,
-        OUTSIDE
-    }
-
-    public JoinQuery(int radius, List<String> streamIds, List<String> fields) {
+    public JoinQuery(double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
         this.radius = radius;
         this.streamIds = streamIds;
         this.fields = fields;
         this.results = new ArrayList<>();
+        this.distance = distance;
+        this.iDistance = iDistance;
     }
 
-    public int getRadius() {
+    public double getRadius() {
         return this.radius;
     }
 
@@ -40,33 +38,26 @@ public class JoinQuery {
         return this.fields;
     }
 
-    private QuerySpherePosition getQuerySpherePosition(double queryTupleToCentroidDistance, double clusterRadius) {
-        if (queryTupleToCentroidDistance < clusterRadius) {
-            return QuerySpherePosition.INSIDE;
-        } else if (queryTupleToCentroidDistance < clusterRadius + this.getRadius()) {
-            return QuerySpherePosition.INTERSECTS;
-        } else {
-            return QuerySpherePosition.OUTSIDE;
-        }
+    public Distance getDistance() {
+        return this.distance;
+    }
+
+    public IDistance getIDistance() {
+        return this.iDistance;
     }
 
     private List<Tuple> findJoinPartnersInStream(Tuple tuple, QueryGroup queryGroup, String streamToJoin) {
         BPlusTree bPlusTree = queryGroup.getBPlusTree();
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-        Distance distance = new EuclideanDistance();
         List<Tuple> joinCandidates = new ArrayList<>();
 
         for (Cluster cluster : queryGroup.getClusterMap().values()) {
-            double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+            IDistance iDistance = queryGroup.getIDistance();
+            List<Double> searchBounds = iDistance.getSearchBounds(cluster.getRadius(), cluster.getCentroid(),
+                    cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple));
 
-            switch (this.getQuerySpherePosition(queryTupleToCentroidDistance, cluster.getRadius())) {
-                case INSIDE:
-                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
-                            Math.min(cluster.getI() * queryGroup.getC() + cluster.getRadius(), cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance + this.getRadius())));
-                    break;
-                case INTERSECTS:
-                    joinCandidates.addAll(bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance - this.getRadius(),
-                            cluster.getI() * queryGroup.getC() + cluster.getRadius()));
+            if (!Double.isNaN(searchBounds.get(0)) && !Double.isNaN(searchBounds.get(1))) {
+                joinCandidates.addAll(bPlusTree.search(searchBounds.get(0), searchBounds.get(1)));
             }
         }
 

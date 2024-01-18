@@ -44,7 +44,7 @@ public class JoinerBolt extends BaseWindowedBolt {
     }
 
     public Boolean isTupleInQueryGroupTree(Tuple tuple, QueryGroup queryGroup) {
-        Distance distance = new EuclideanDistance();
+        Distance distance = queryGroup.getDistance();
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         BPlusTree bPlusTree = queryGroup.getBPlusTree();
 
@@ -65,7 +65,7 @@ public class JoinerBolt extends BaseWindowedBolt {
     }
 
     private void insertIntoQueryGroupTree(Tuple tuple, QueryGroup queryGroup) {
-        Distance distance = new EuclideanDistance();
+        Distance distance = queryGroup.getDistance();
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         BPlusTree bPlusTree = queryGroup.getBPlusTree();
 

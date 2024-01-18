@@ -33,9 +33,9 @@ public class DataSpout extends BaseRichSpout {
         double altitude = generateRandomCoordinate(1000, 50000);
         double text = generateRandomDouble();
 
-        collector.emit("stream_1", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
-        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
-        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), latitude, longitude, altitude, text));
+        collector.emit("stream_1", new Values(UUID.randomUUID().toString(), 2000.0, 1000.0, 1000.0, text));
+        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), 1000.0, 1000.0, 1000.0, text));
+        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), 1000.0, 1000.0, 2000.0, text));
 
         try {
             Thread.sleep(1000);
