@@ -128,7 +128,10 @@ class Stage implements Serializable {
     private List<String> on;
 
     @JsonProperty("radius")
-    private int radius;
+    private double radius;
+
+    @JsonProperty("distanceType")
+    private String distanceType;
 
     // Add getters and setters
 
@@ -156,11 +159,19 @@ class Stage implements Serializable {
         this.on = on;
     }
 
-    public int getRadius() {
+    public double getRadius() {
         return radius;
     }
 
-    public void setRadius(int radius) {
+    public void setRadius(double radius) {
         this.radius = radius;
+    }
+
+    public void setDistanceType(String distanceType) {
+        this.distanceType = distanceType;
+    }
+
+    public String getDistanceType() {
+        return this.distanceType;
     }
 }

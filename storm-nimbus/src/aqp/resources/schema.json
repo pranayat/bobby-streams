@@ -92,7 +92,8 @@
             "long",
             "alt"
           ],
-          "radius": 100
+          "radius": 0.5,
+          "distanceType": "cosine"
         },
         {
           "type": "max",
