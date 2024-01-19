@@ -15,6 +15,7 @@ public class CosineDistance implements Distance {
             normPoint2 += Math.pow(point2.get(i), 2);
         }
 
-        return 1 - (dotProduct / (Math.sqrt(normPoint1) * Math.sqrt(normPoint2)));
+        // limit cosine similarity to non negative domain
+        return 1 - Math.max(0, (dotProduct / (Math.sqrt(normPoint1) * Math.sqrt(normPoint2))));
     }
 }
