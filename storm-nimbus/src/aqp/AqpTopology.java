@@ -17,17 +17,18 @@ public class AqpTopology {
         TopologyBuilder builder = new TopologyBuilder();
         builder.setSpout("data", new DataSpout(), 1);
 
-        // use either this or kMeansClusterAssignerBolt, not both
-        // can have multiple instances as entire data is not needed for clustering
-        // BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
-        // for (Stream stream : schemaConfig.getStreams()) {
-        //     gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
-        // }
-
-        // should have only 1 instance
-        BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
-        for (Stream stream : schemaConfig.getStreams()) {
-            kMeansClusterAssignerBolt.allGrouping("data", stream.getId());
+        if (schemaConfig.getClustering().getType().equals("k-means")) {
+            // should have only 1 instance
+            BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
+            for (Stream stream : schemaConfig.getStreams()) {
+                kMeansClusterAssignerBolt.allGrouping("data", stream.getId());
+            }
+        } else {
+            // can have multiple instances as entire data is not needed for clustering
+            BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
+            for (Stream stream : schemaConfig.getStreams()) {
+                gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
+            }
         }
 
         // should have only 1 instance

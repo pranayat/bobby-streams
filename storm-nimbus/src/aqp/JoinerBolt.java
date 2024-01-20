@@ -51,7 +51,8 @@ public class JoinerBolt extends BaseWindowedBolt {
         // check for in all clusters since we replicate tuples to adjacent clusters
         // it would have been indexed into the tree with iDistances wrt all cluster centroids it was replicated to
         for (Cluster cluster : queryGroup.getClusterMap().values()) {
-            double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+            double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
+                    tupleWrapper.getCoordinates(tuple, queryGroup.getDistance() instanceof CosineDistance));
 
             List<Tuple> existingTuples = bPlusTree.search(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance,
                     cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance);
@@ -70,7 +71,8 @@ public class JoinerBolt extends BaseWindowedBolt {
         BPlusTree bPlusTree = queryGroup.getBPlusTree();
 
         Cluster cluster = queryGroup.getCluster(tuple.getStringByField("clusterId"));
-        double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(), tupleWrapper.getCoordinates(tuple));
+        double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
+                tupleWrapper.getCoordinates(tuple, queryGroup.getDistance() instanceof CosineDistance));
 
         // insert tuple into B+tree by computing iDistance from tuple's cluster
         bPlusTree.insert(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance, tuple);

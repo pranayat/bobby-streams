@@ -39,9 +39,9 @@ public class KMeansClusterAssignerBolt extends BaseWindowedBolt {
     public void execute(TupleWindow inputWindow) {
 
         for (QueryGroup queryGroup : this.queryGroups) {
-            int k = 3, iterations = 100;
+            int k = this.schemaConfig.getClustering().getK(), iterations = this.schemaConfig.getClustering().getIterations();
             TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-            KMeansClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, k, iterations);
+            KMeansClusterMaker clusterMaker = new KMeansClusterMaker(tupleWrapper, k, iterations, queryGroup.getDistance());
             List<Cluster> clusters = clusterMaker.fit(inputWindow.get());
 
             for (Cluster cluster : clusters) {

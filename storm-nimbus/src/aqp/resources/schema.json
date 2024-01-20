@@ -76,6 +76,11 @@
       ]
     }
   ],
+  "clustering": {
+    "type": "k-means",
+    "k": 3,
+    "iterations": 100
+  },
   "queries": [
     {
       "id": "query_1",
@@ -92,7 +97,7 @@
             "long",
             "alt"
           ],
-          "radius": 0.5,
+          "radius": 0.2,
           "distanceType": "cosine"
         },
         {
