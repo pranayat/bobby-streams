@@ -14,6 +14,9 @@ public class SchemaConfig implements Serializable {
     @JsonProperty("queries")
     private List<Query> queries;
 
+    @JsonProperty("clustering")
+    private Clustering clustering;
+
     // Add getters and setters
 
     public List<Stream> getStreams() {
@@ -33,6 +36,10 @@ public class SchemaConfig implements Serializable {
 
     public List<Query> getQueries() {
         return queries;
+    }
+
+    public Clustering getClustering() {
+        return this.clustering;
     }
 
     public void setQueries(List<Query> queries) {
@@ -86,6 +93,30 @@ class Field implements Serializable {
 
     public String getType() {
         return this.type;
+    }
+}
+
+class Clustering implements Serializable {
+
+    @JsonProperty("type")
+    private String type;
+
+    @JsonProperty("k")
+    private int k;
+
+    @JsonProperty("iterations")
+    private int iterations;
+
+    public String getType() {
+        return this.type;
+    }
+
+    public int getK() {
+        return this.k;
+    }
+
+    public int getIterations() {
+        return this.iterations;
     }
 }
 

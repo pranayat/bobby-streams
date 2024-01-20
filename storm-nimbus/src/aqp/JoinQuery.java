@@ -54,7 +54,7 @@ public class JoinQuery {
         for (Cluster cluster : queryGroup.getClusterMap().values()) {
             IDistance iDistance = queryGroup.getIDistance();
             List<Double> searchBounds = iDistance.getSearchBounds(cluster.getRadius(), cluster.getCentroid(),
-                    cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple));
+                    cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance));
 
             if (!Double.isNaN(searchBounds.get(0)) && !Double.isNaN(searchBounds.get(1))) {
                 joinCandidates.addAll(bPlusTree.search(searchBounds.get(0), searchBounds.get(1)));
