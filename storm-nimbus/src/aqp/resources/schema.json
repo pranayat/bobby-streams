@@ -97,8 +97,8 @@
             "long",
             "alt"
           ],
-          "radius": 0.2,
-          "distanceType": "cosine"
+          "radius": 10000,
+          "distanceType": "euclidean"
         },
         {
           "type": "max",
