@@ -97,7 +97,7 @@
             "long",
             "alt"
           ],
-          "radius": 10000,
+          "radius": 2300,
           "distanceType": "euclidean"
         },
         {

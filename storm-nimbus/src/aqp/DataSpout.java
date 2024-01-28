@@ -33,9 +33,16 @@ public class DataSpout extends BaseRichSpout {
         double altitude = generateRandomCoordinate(1000, 50000);
         double text = generateRandomDouble();
 
-        collector.emit("stream_1", new Values(UUID.randomUUID().toString(), 2000.0, 1000.0, 1000.0, text));
-        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), 1000.0, 1000.0, 1000.0, text));
-        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), 1000.0, 1000.0, 2000.0, text));
+        // for a join radius of 2300 only A1, B1, C1 should join
+        collector.emit("stream_1", new Values(UUID.randomUUID().toString(), 0.0, 0.0, 0.0, text)); // A1
+        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), 2000.0, 0.0, 0.0, text)); // B1
+        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), 0.0, 1000.0, 0.0, text)); // C1
+
+        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), 3000.0, 0.0, 0.0, text));
+        collector.emit("stream_2", new Values(UUID.randomUUID().toString(), 0.0, 3000.0, 0.0, text));
+
+        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), 0.0, 2000.0, 3000.0, text));
+        collector.emit("stream_3", new Values(UUID.randomUUID().toString(), 3000.0, 2000.0, 0.0, text));
 
         try {
             Thread.sleep(1000);

@@ -26,7 +26,7 @@ public class QueryGroup {
     public QueryGroup(List<String> axisNames, Distance distance, IDistance iDistance) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
-        this.c = 10000;
+        this.c = 1000000;
         this.axisNames = axisNames;
         Collections.sort(this.axisNames);
         this.name = this.axisNames.toString();

@@ -59,48 +59,22 @@ public class JoinQuery {
             }
         }
 
-        // remove join partners found in the same stream to prevent within stream joins
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : joinCandidates) {
             if (streamToJoin.equals(joinCandidate.getSourceStreamId())) {
-                joinCandidatesFromOtherStreams.add(joinCandidate);
+                // iDistance has false positives as the index is simply distance from cluster center
+                boolean isFalsePositive = this.distance.calculate(tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance),
+                        tupleWrapper.getCoordinates(joinCandidate, this.distance instanceof CosineDistance)) > this.getRadius();
+
+                if (!isFalsePositive) {
+                    joinCandidatesFromOtherStreams.add(joinCandidate);
+                } else {
+                    // TODO collect some stats here for iDistance false positives
+                }
             }
         }
 
         return joinCandidatesFromOtherStreams;
-    }
-
-    private List<Tuple> findIntersection(List<List<Tuple>> listOfTupleLists) {
-        List<Tuple> result = new ArrayList<>();
-        for (List<Tuple> tupleList : listOfTupleLists) {
-            if (result.size() == 0) {
-                result.addAll(tupleList);
-            } else {
-                result.retainAll(tupleList);
-            }
-        }
-
-        return result;
-    }
-
-    private Map<String, Map<Tuple, List<Tuple>>> convertToNestedMap(Map<String, List<Tuple>> originalMap) {
-        Map<String, Map<Tuple, List<Tuple>>> convertedMap = new HashMap<>();
-
-        for (Map.Entry<String, List<Tuple>> entry : originalMap.entrySet()) {
-            String key = entry.getKey();
-            List<Tuple> values = entry.getValue();
-
-            // Create a nested map for the current key
-            Map<Tuple, List<Tuple>> nestedMap = new HashMap<>();
-            for (Tuple value : values) {
-                nestedMap.put(value, new ArrayList<>());
-            }
-
-            // Put the nested map into the converted map
-            convertedMap.put(key, nestedMap);
-        }
-
-        return convertedMap;
     }
 
     private Map<String, List<Tuple>> collectJoinPartnerSetByStream(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream) {
