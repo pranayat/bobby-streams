@@ -40,7 +40,7 @@ public class AqpTopology {
         }
 
         // can have multiple instances, but not more than the number of clusters
-        BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
+        BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 1);
         for (Stream stream : schemaConfig.getStreams()) {
             joinerBolt.fieldsGrouping("partitionAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
         }
