@@ -5,6 +5,7 @@ import org.apache.storm.tuple.Tuple;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 public class BPlusTree {
     int m;
@@ -33,6 +34,41 @@ public class BPlusTree {
             }
         };
         return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, null), c);
+    }
+
+    private List<Integer> binarySearchDuplicates(DictionaryPair[] dps, int numPairs, double t) {
+        Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
+            @Override
+            public int compare(DictionaryPair o1, DictionaryPair o2) {
+                Double a = Double.valueOf(o1.key);
+                Double b = Double.valueOf(o2.key);
+                return a.compareTo(b);
+            }
+        };
+
+        int index = Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, null), c);
+        List<Integer> duplicates = new ArrayList<>();
+
+        if (index >= 0) {
+            // Found at least one occurrence
+            duplicates.add(index);
+
+            // Search to the left of the found index for more occurrences
+            int leftIndex = index - 1;
+            while (leftIndex >= 0 && dps[leftIndex] != null && dps[leftIndex].key == t) {
+                duplicates.add(leftIndex);
+                leftIndex--;
+            }
+
+            // Search to the right of the found index for more occurrences
+            int rightIndex = index + 1;
+            while (rightIndex < dps.length && dps[rightIndex] != null && dps[rightIndex].key == t) {
+                duplicates.add(rightIndex);
+                rightIndex++;
+            }
+        }
+
+        return duplicates;
     }
 
     /**
@@ -434,10 +470,12 @@ public class BPlusTree {
      * Given a key, this method will remove the dictionary pair with the
      * corresponding key from the B+ tree.
      *
-     * @param key: an integer key that corresponds with an existing dictionary
-     *             pair
+     * @param key:             an integer key that corresponds with an existing dictionary
+     *                         pair
+     * @param tupleIdToDelete: since iDistance results in duplicate keys, this is needed
+     *                         to delete the intended tuple
      */
-    public void delete(double key) {
+    public void delete(double key, String tupleIdToDelete) {
         if (isEmpty()) {
 
             /* Flow of execution goes here when B+ tree has no dictionary pairs */
@@ -448,8 +486,16 @@ public class BPlusTree {
 
             // Get leaf node and attempt to find index of key to delete
             LeafNode ln = (this.root == null) ? this.firstLeaf : findLeafNode(key);
-            int dpIndex = binarySearch(ln.dictionary, ln.numPairs, key);
+            List<Integer> dpIndices = binarySearchDuplicates(ln.dictionary, ln.numPairs, key);
+            int dpIndex = -1;
 
+            // filter duplicates to get index of tuple to delete
+            for (int index : dpIndices) {
+                if (ln.dictionary[index].value.getStringByField("tupleId").equals(tupleIdToDelete)) {
+                    dpIndex = index;
+                    break;
+                }
+            }
 
             if (dpIndex < 0) {
 
@@ -999,7 +1045,7 @@ public class BPlusTree {
                 // Insert dictionary pair, increment numPairs, sort dictionary
                 this.dictionary[numPairs] = dp;
                 numPairs++;
-                Arrays.sort(this.dictionary, 0, numPairs);
+                sortDictionary(this.dictionary);
 
                 return true;
             }

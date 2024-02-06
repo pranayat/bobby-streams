@@ -89,10 +89,26 @@ public class JoinerBolt extends BaseWindowedBolt {
         return centroid;
     }
 
+    private void deleteExpiredTuplesFromTree(List<Tuple> expiredTuples) {
+        for (Tuple expiredTuple : expiredTuples) {
+            QueryGroup queryGroup = this.getQueryGroupByName(expiredTuple.getStringByField("queryGroupName"));
+            Distance distance = queryGroup.getDistance();
+            TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
+            Cluster cluster = queryGroup.getCluster(expiredTuple.getStringByField("clusterId"));
+            BPlusTree bPlusTree = queryGroup.getBPlusTree();
+            double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
+                    tupleWrapper.getCoordinates(expiredTuple, queryGroup.getDistance() instanceof CosineDistance));
+
+            // deleting by iDistance key alone could result in deleting false positives, so pass tupleId as well
+            bPlusTree.delete(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance,
+                    expiredTuple.getStringByField("tupleId"));
+        }
+    }
+
     @Override
     public void execute(TupleWindow inputWindow) {
 
-        for (Tuple tuple : inputWindow.get()) {
+        for (Tuple tuple : inputWindow.getNew()) {
             QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
             TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
             String clusterId = tuple.getStringByField("clusterId");
@@ -107,7 +123,7 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
         }
 
-        for (Tuple tuple : inputWindow.get()) {
+        for (Tuple tuple : inputWindow.getNew()) {
             QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
             // if we don't replicate to adjacent cells, this check is not needed, it will always return false (I verified this)
@@ -137,6 +153,8 @@ public class JoinerBolt extends BaseWindowedBolt {
             // index the tuple
             this.insertIntoQueryGroupTree(tuple, queryGroup);
         }
+
+        this.deleteExpiredTuplesFromTree(inputWindow.getExpired());
     }
 
     @Override
