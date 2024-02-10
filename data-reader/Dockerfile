@@ -9,4 +9,5 @@ COPY requirements.txt /data-reader
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run script when the container launches
-CMD ["python3", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "producer_script.py"]
+# CMD ["python3", "-m", "debugpy", "--listen", "0.0.0.0:5678", "--wait-for-client", "producer_script.py"]
+CMD ["python3", "producer_script.py"]

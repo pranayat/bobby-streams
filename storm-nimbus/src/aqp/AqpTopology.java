@@ -15,19 +15,20 @@ public class AqpTopology {
 
         // data -> gridCellAssigner -> partitionAssigner -> joiner
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("data", new DataSpout(), 1);
+        builder.setSpout("redis", new RedisStreamSpout(), 1);
+//        builder.setSpout("data", new DataSpout(), 1);
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
             // should have only 1 instance
             BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
             for (Stream stream : schemaConfig.getStreams()) {
-                kMeansClusterAssignerBolt.allGrouping("data", stream.getId());
+                kMeansClusterAssignerBolt.allGrouping("redis", stream.getId());
             }
         } else {
             // can have multiple instances as entire data is not needed for clustering
             BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
             for (Stream stream : schemaConfig.getStreams()) {
-                gridCellAssignerBolt.shuffleGrouping("data", stream.getId());
+                gridCellAssignerBolt.shuffleGrouping("redis", stream.getId());
             }
         }
 
@@ -35,8 +36,8 @@ public class AqpTopology {
         BoltDeclarer partitionAssignerBolt = builder.setBolt("partitionAssigner", new PartitionAssignerBolt(), 1);
         for (Stream stream : schemaConfig.getStreams()) {
             // use either this or kMeansClusterAssignerBolt, not both
-            // partitionAssignerBolt.allGrouping("gridCellAssigner", stream.getId());
-            partitionAssignerBolt.allGrouping("kMeansClusterAssigner", stream.getId());
+            partitionAssignerBolt.allGrouping("gridCellAssigner", stream.getId());
+//            partitionAssignerBolt.allGrouping("kMeansClusterAssigner", stream.getId());
         }
 
         // can have multiple instances, but not more than the number of clusters

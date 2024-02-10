@@ -1,14 +1,23 @@
 import pandas as pd
 import redis
 import json
-import debugpy
-# debugpy.listen(5678)
-debugpy.wait_for_client()
+# import debugpy
+
+# debugpy.wait_for_client()
 
 def produce_to_redis(df, r):
     try:
-        for _, row in df.head(10).iterrows():
-            r.xadd("flight_data", {"data": row.to_json()})
+        for index, row in df.head(1000).iterrows():
+            if index % 3 == 0:
+                stream = "stream_1"
+            elif index % 3 == 1:
+                stream = "stream_2"
+            elif index % 3 == 2:
+                stream = "stream_3"                
+
+            r.xadd(stream, {"data": row.to_json()})
+
+        print("done")
 
     except Exception as e:
         print(f"Error producing to redis: {str(e)}")
