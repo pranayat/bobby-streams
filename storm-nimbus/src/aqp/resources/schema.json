@@ -77,7 +77,7 @@
     }
   ],
   "clustering": {
-    "type": "k-means",
+    "type": "grid",
     "k": 3,
     "iterations": 100
   },

@@ -4,6 +4,7 @@
   // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
   "version": "0.2.0",
   "configurations": [
+
     {
       "type": "java",
       "name": "Storm Debug",
@@ -12,6 +13,22 @@
       "mainClass": "aqp.AqpTopology",
       "projectName": "aqp",
       "port": 8998
-    }
+    },
+    {
+      "name": "Python: Remote Attach",
+      "type": "python",
+      "request": "attach",
+      "connect": {
+          "host": "localhost",
+          "port": 5678
+      },
+      "pathMappings": [
+          {
+              "localRoot": "${workspaceFolder}/data-reader",
+              "remoteRoot": "."
+          }
+      ],
+      "justMyCode": true
+  }
   ]
 }
