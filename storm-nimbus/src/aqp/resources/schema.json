@@ -12,15 +12,15 @@
           "type": "double"
         },
         {
-          "name": "long",
+          "name": "lon",
           "type": "double"
         },
         {
-          "name": "alt",
+          "name": "geoaltitude",
           "type": "double"
         },
         {
-          "name": "text",
+          "name": "velocity",
           "type": "double"
         }
       ]
@@ -37,15 +37,15 @@
           "type": "double"
         },
         {
-          "name": "long",
+          "name": "lon",
           "type": "double"
         },
         {
-          "name": "alt",
+          "name": "geoaltitude",
           "type": "double"
         },
         {
-          "name": "text",
+          "name": "velocity",
           "type": "double"
         }
       ]
@@ -62,15 +62,15 @@
           "type": "double"
         },
         {
-          "name": "long",
+          "name": "lon",
           "type": "double"
         },
         {
-          "name": "alt",
+          "name": "geoaltitude",
           "type": "double"
         },
         {
-          "name": "text",
+          "name": "velocity",
           "type": "double"
         }
       ]
@@ -94,10 +94,10 @@
           ],
           "on": [
             "lat",
-            "long",
-            "alt"
+            "lon",
+            "geoaltitude"
           ],
-          "radius": 2300,
+          "radius": 230000,
           "distanceType": "euclidean"
         },
         {
