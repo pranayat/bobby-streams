@@ -5,12 +5,28 @@ services:
         build: ./storm-nimbus
         tty: true
         ports:
-            - 8080:8080
+            - 8000:8080
             - 8998:8998
         volumes:
             - './storm-nimbus:/storm-nimbus'
         environment:
             - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998"
+    
+    data-reader:
+        build: ./data-reader
+        depends_on:
+            - redis
+        ports:
+            - 5678:5678
+        tty: true
+        volumes:
+            - './data-reader:/data-reader'
+
+    redis:
+        image: redis:latest
+        ports:
+        - "6379:6379"            
 
 volumes:
     storm-nimbus:
+    data-reader:
