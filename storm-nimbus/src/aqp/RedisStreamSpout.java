@@ -24,9 +24,11 @@ public class RedisStreamSpout extends BaseRichSpout {
     private Jedis jedis;
     ObjectMapper objectMapper;
     SchemaConfig schemaConfig;
+    String streamId;
 
-    public RedisStreamSpout() {
+    public RedisStreamSpout(String streamId) {
         this.schemaConfig = SchemaConfigBuilder.build();
+        this.streamId = streamId;
     }
 
     @Override
@@ -35,17 +37,13 @@ public class RedisStreamSpout extends BaseRichSpout {
         this.objectMapper = new ObjectMapper();
 
         this.jedis = new Jedis("redis", 6379); // Set your Redis server details
-
         try {
-            for (Stream stream : this.schemaConfig.getStreams()) {
-                jedis.xgroupCreate(stream.getId(), "storm_group", StreamEntryID.LAST_ENTRY, false);
-                jedis.xgroupCreateConsumer(stream.getId(), "storm_group", "storm_consumer");
-            }
+            jedis.xgroupCreate(this.streamId, "storm_group", StreamEntryID.LAST_ENTRY, false);
+            jedis.xgroupCreateConsumer(this.streamId, "storm_group", "storm_consumer");
         } catch (Exception e) {
             // Group already exists
+            System.err.println(e);
         }
-
-
     }
 
     @Override
@@ -53,49 +51,42 @@ public class RedisStreamSpout extends BaseRichSpout {
         // Fetch data from Redis stream for all unreceived entries
         XReadGroupParams xReadGroupParams = new XReadGroupParams();
 //        xReadGroupParams.block(5000);
-        xReadGroupParams.count(1000);
+        xReadGroupParams.count(1);
 
         // Create a map of streams and starting entry IDs
         Map<String, StreamEntryID> streamEntries = new HashMap<>();
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            streamEntries.put(stream.getId(), StreamEntryID.UNRECEIVED_ENTRY);
+        streamEntries.put(this.streamId, StreamEntryID.UNRECEIVED_ENTRY);
+        
+        List<Map.Entry<String, List<StreamEntry>>> entries = null;
+        try {
+            // Fetch entries using xread method
+            entries = jedis.xreadGroup("storm_group", "storm_consumer", xReadGroupParams, streamEntries);
+        } catch (Exception e) {
+            System.err.println(e);
         }
-
-        // Fetch entries using xread method
-        List<Map.Entry<String, List<StreamEntry>>> entries = jedis.xreadGroup("storm_group", "storm_consumer", xReadGroupParams, streamEntries);
 
         if (entries == null) {
             return;
         }
 
-        int i = 0;
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            if (i >= entries.size()) {
-                break;
-            }
-            String streamId = entries.get(i).getKey();
-            List<StreamEntry> entriesForStream = entries.get(i).getValue();
-            for (StreamEntry entry : entriesForStream) {
-                String jsonFields = entry.getFields().get("data");
-                JsonNode jsonNode;
-                try {
-                    jsonNode = objectMapper.readTree(jsonFields);
-                    List<Object> values = new ArrayList<>();
-                    for (Field field : stream.getFields()) {
-                        if (field.getName().equals("tupleId")) {
-                            values.add(entry.getID().toString());
-                        } else if (field.getType().equals("double")) {
-                            values.add(jsonNode.get(field.getName()).asDouble());
-                        } else {
-                            values.add(jsonNode.get(field.getName()).asText());
-                        }
-                    }
-                    collector.emit(streamId, new Values(values.toArray()));
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        StreamEntry entry = entries.get(0).getValue().get(0); // read 1 tuple from 1 stream, hence getting 0th values
+        String jsonFields = entry.getFields().get("data");
+        JsonNode jsonNode;
+        try {
+            jsonNode = objectMapper.readTree(jsonFields);
+            List<Object> values = new ArrayList<>();
+            for (Field field : this.schemaConfig.getStreamById(this.streamId).getFields()) {
+                if (field.getName().equals("tupleId")) {
+                    values.add(entry.getID().toString());
+                } else if (field.getType().equals("double")) {
+                    values.add(jsonNode.get(field.getName()).asDouble());
+                } else {
+                    values.add(jsonNode.get(field.getName()).asText());
                 }
             }
-            i += 1;
+            collector.emit(this.streamId, new Values(values.toArray()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -108,15 +99,15 @@ public class RedisStreamSpout extends BaseRichSpout {
         }
     }
 
-    @Override
-    public void ack(Object msgId) {
-        // Acknowledgment logic (if needed)
-    }
+//    @Override
+//    public void ack(Object msgId) {
+    // Acknowledgment logic (if needed)
+//    }
 
-    @Override
-    public void fail(Object msgId) {
-        // Failure handling logic (if needed)
-    }
+//    @Override
+//    public void fail(Object msgId) {
+    // Failure handling logic (if needed)
+//    }
 
     @Override
     public void close() {
