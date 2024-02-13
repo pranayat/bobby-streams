@@ -15,20 +15,24 @@ public class AqpTopology {
 
         // data -> gridCellAssigner -> partitionAssigner -> joiner
         TopologyBuilder builder = new TopologyBuilder();
-        builder.setSpout("redis", new RedisStreamSpout(), 1);
+
+        for (Stream stream : schemaConfig.getStreams()) {
+            builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+        }
+        
 //        builder.setSpout("data", new DataSpout(), 1);
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
             // should have only 1 instance
             BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
             for (Stream stream : schemaConfig.getStreams()) {
-                kMeansClusterAssignerBolt.allGrouping("redis", stream.getId());
+                kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"), stream.getId());
             }
         } else {
             // can have multiple instances as entire data is not needed for clustering
             BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
             for (Stream stream : schemaConfig.getStreams()) {
-                gridCellAssignerBolt.shuffleGrouping("redis", stream.getId());
+                gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"), stream.getId());
             }
         }
 
@@ -75,6 +79,7 @@ public class AqpTopology {
             // let the topology run for 100 minutes. note topologies never terminate!
             Thread.sleep(6000000);
 
+            System.out.println("End Topology");
 //            cluster.killTopology("aqp");
 
             // we are done, so shutdown the local cluster
