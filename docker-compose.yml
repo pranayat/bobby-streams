@@ -1,18 +1,19 @@
 version: '3.2'
 
 services:
-    storm-nimbus:
-        container_name: storm-nimbus
+    nimbus:
+        container_name: nimbus
         build: ./storm-nimbus
+        command: sleep infinity
         tty: true
         ports:
-            - 8000:8080
-            - 8998:8998
+            - 8998:8998 #debug
+            - 6627:6627 #thrift
         volumes:
             - './storm-nimbus:/storm-nimbus'
         environment:
             - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998"
-    
+
     data-reader:
         container_name: data-reader
         build: ./data-reader
