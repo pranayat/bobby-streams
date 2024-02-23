@@ -1,36 +1,52 @@
-version: '3.2'
-
-services:
-    nimbus:
-        container_name: nimbus
-        build: ./storm-nimbus
-        command: sleep infinity
-        tty: true
-        ports:
-            - 8998:8998 #debug
-            - 6627:6627 #thrift
-        volumes:
-            - './storm-nimbus:/storm-nimbus'
-        environment:
-            - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998"
-
-    data-reader:
-        container_name: data-reader
-        build: ./data-reader
-        depends_on:
-            - redis
-        ports:
-            - 5678:5678
-        tty: true
-        volumes:
-            - './data-reader:/data-reader'
-
-    redis:
-        container_name: redis
-        image: redis:latest
-        ports:
-        - "6379:6379"            
+version: "3.8"
 
 volumes:
-    storm-nimbus:
-    data-reader:
+  storm-nimbus:
+  data-reader:
+  
+services:
+  zookeeper:
+    image: zookeeper:3.5.9
+    restart: always
+
+  nimbus:
+    image: pranayatomar/storm-jdk-m1
+    command: >
+      storm nimbus
+      -c storm.local.hostname="nimbus"
+      -c worker.heap.memory.mb=128
+    ports:
+      - 6627:6627
+    restart: always
+    volumes:
+        - './storm-nimbus:/storm-nimbus'
+
+  supervisor:
+    image: storm:2.5.0
+    command: >
+      storm supervisor
+      -c worker.heap.memory.mb=128
+    restart: always
+
+  ui:
+    image: storm:2.5.0
+    command: >
+      storm ui
+    ports:
+      - 8083:8080
+    restart: always
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    restart: always
+
+  data-reader:
+    image: python:3.9
+    command: tail -F anything
+    depends_on:
+      - redis
+    restart: always
+    volumes:
+        - './data-reader:/data-reader'
