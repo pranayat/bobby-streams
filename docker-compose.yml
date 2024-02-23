@@ -43,7 +43,7 @@ services:
     restart: always
 
   data-reader:
-    image: python:3.9
+    image: python:3.9-bullseye
     command: tail -F anything
     depends_on:
       - redis
