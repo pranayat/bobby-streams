@@ -146,12 +146,13 @@ public class JoinerBolt extends BaseWindowedBolt {
                 String joinId = String.join("+", tupleIds);
 
                 for (Tuple joinResult : joinResults) {
-                    _collector.emit(new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getSourceStreamId()));
+                    _collector.emit(joinResult.getSourceStreamId(), tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getSourceStreamId()));
                 }
             }
-
+            
             // index the tuple
             this.insertIntoQueryGroupTree(tuple, queryGroup);
+            _collector.ack(tuple);
         }
 
         this.deleteExpiredTuplesFromTree(inputWindow.getExpired());

@@ -63,7 +63,8 @@ public class KMeansClusterAssignerBolt extends BaseWindowedBolt {
                     values.add(queryGroup.getName()); // query group Id eg. (lat, long)
 
                     // stream_1, (25,35) (lat,long) ...
-                    _collector.emit(tupleStreamId, new Values(values.toArray()));
+                    _collector.emit(tupleStreamId, tuple, new Values(values.toArray()));
+                    _collector.ack(tuple);
                 }
             }
         }

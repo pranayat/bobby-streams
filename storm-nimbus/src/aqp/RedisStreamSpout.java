@@ -84,7 +84,7 @@ public class RedisStreamSpout extends BaseRichSpout {
                     values.add(jsonNode.get(field.getName()).asText());
                 }
             }
-            collector.emit(this.streamId, new Values(values.toArray()));
+            collector.emit(this.streamId, new Values(values.toArray()), entry.getID().toString());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
