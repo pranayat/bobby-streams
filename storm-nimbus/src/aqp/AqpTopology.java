@@ -13,14 +13,12 @@ public class AqpTopology {
 
         SchemaConfig schemaConfig = SchemaConfigBuilder.build();
 
-        // data -> gridCellAssigner -> partitionAssigner -> joiner
+        // data/redis -> gridCellAssigner -> (partitionAssigner) -> joiner
         TopologyBuilder builder = new TopologyBuilder();
 
         for (Stream stream : schemaConfig.getStreams()) {
             builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
         }
-        
-//        builder.setSpout("data", new DataSpout(), 1);
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
             // should have only 1 instance
@@ -36,18 +34,10 @@ public class AqpTopology {
             }
         }
 
-        // should have only 1 instance
-        BoltDeclarer partitionAssignerBolt = builder.setBolt("partitionAssigner", new PartitionAssignerBolt(), 1);
-        for (Stream stream : schemaConfig.getStreams()) {
-            // use either this or kMeansClusterAssignerBolt, not both
-            partitionAssignerBolt.allGrouping("gridCellAssigner", stream.getId());
-//            partitionAssignerBolt.allGrouping("kMeansClusterAssigner", stream.getId());
-        }
-
         // can have multiple instances, but not more than the number of clusters
         BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 1);
         for (Stream stream : schemaConfig.getStreams()) {
-            joinerBolt.fieldsGrouping("partitionAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
+            joinerBolt.partialKeyGrouping("gridCellAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
         }
 
         Config conf = new Config();
