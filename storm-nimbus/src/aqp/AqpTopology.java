@@ -22,24 +22,26 @@ public class AqpTopology {
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
             // should have only 1 instance
-            BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner", new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100), new BaseWindowedBolt.Count(100)), 1);
+            BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner",
+                    new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100),
+                            new BaseWindowedBolt.Count(100)),
+                    1);
             for (Stream stream : schemaConfig.getStreams()) {
-                kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"), stream.getId());
+                kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
             }
         } else {
             // can have multiple instances as entire data is not needed for clustering
             BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
             for (Stream stream : schemaConfig.getStreams()) {
-                gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"), stream.getId());
+                gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
         }
 
         // can have multiple instances, but not more than the number of clusters
-        BoltDeclarer joinerBolt = builder.setBolt("joiner", new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 4);
-        for (Stream stream : schemaConfig.getStreams()) {
-            // joinerBolt.partialKeyGrouping("gridCellAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
-            joinerBolt.fieldsGrouping("gridCellAssigner", stream.getId(), new Fields("clusterId", "queryGroupName"));
-        }
+        BoltDeclarer joinerBolt = builder.setBolt("joiner",
+                new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 4);
+        joinerBolt.partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
+        // joinerBolt.fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
         Config conf = new Config();
         conf.setDebug(false);
@@ -49,8 +51,10 @@ public class AqpTopology {
             // run it in a live cluster
 
             // set the number of workers for running all spout and bolt tasks
-            // If we have two supervisors with 4 allocated workers each, and this topology is
-            // submitted to the master (Nimbus) node, then these 8 workers will be distributed
+            // If we have two supervisors with 4 allocated workers each, and this topology
+            // is
+            // submitted to the master (Nimbus) node, then these 8 workers will be
+            // distributed
             // to the two supervisors evenly: four each.
             conf.setNumWorkers(8);
 
@@ -71,10 +75,10 @@ public class AqpTopology {
             Thread.sleep(6000000);
 
             System.out.println("End Topology");
-//            cluster.killTopology("aqp");
+            // cluster.killTopology("aqp");
 
             // we are done, so shutdown the local cluster
-//            cluster.shutdown();
+            // cluster.shutdown();
         }
     }
 }

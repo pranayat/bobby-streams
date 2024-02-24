@@ -50,7 +50,6 @@ public class RedisStreamSpout extends BaseRichSpout {
     public void nextTuple() {
         // Fetch data from Redis stream for all unreceived entries
         XReadGroupParams xReadGroupParams = new XReadGroupParams();
-//        xReadGroupParams.block(5000);
         xReadGroupParams.count(1);
 
         // Create a map of streams and starting entry IDs
@@ -84,7 +83,9 @@ public class RedisStreamSpout extends BaseRichSpout {
                     values.add(jsonNode.get(field.getName()).asText());
                 }
             }
-            collector.emit(this.streamId, new Values(values.toArray()), entry.getID().toString());
+
+            values.add(this.streamId);
+            collector.emit(new Values(values.toArray()), entry.getID().toString());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -92,11 +93,10 @@ public class RedisStreamSpout extends BaseRichSpout {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        // Declare the output fields
-        declarer.declare(new Fields("entryId", "jsonFields"));
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            declarer.declareStream(stream.getId(), new Fields(stream.getFieldNames()));
-        }
+        Stream stream = this.schemaConfig.getStreams().get(0);
+        List<String> fields = new ArrayList<String>(stream.getFieldNames());
+        fields.add("streamId");
+        declarer.declare(new Fields(fields));
     }
 
 //    @Override
@@ -111,7 +111,6 @@ public class RedisStreamSpout extends BaseRichSpout {
 
     @Override
     public void close() {
-        // Close resources (if needed)
         jedis.close();
     }
 }
