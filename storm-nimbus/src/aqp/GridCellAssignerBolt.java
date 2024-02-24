@@ -118,7 +118,8 @@ public class GridCellAssignerBolt extends BaseRichBolt {
                 values.add(queryGroup.getName()); // query group Id eg. (lat, long)
 
                 // stream_1, (25,35) (lat,long) ...
-                _collector.emit(tupleStreamId, new Values(values.toArray()));
+                _collector.emit(tupleStreamId, input, new Values(values.toArray()));
+                _collector.ack(input);
             }
         }
     }

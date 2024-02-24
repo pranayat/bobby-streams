@@ -20,7 +20,7 @@ services:
         volumes:
             - './storm-nimbus:/storm-nimbus'
         environment:
-            - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998"
+            - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998" # for debugging
 
     redis:
         image: redis:latest
