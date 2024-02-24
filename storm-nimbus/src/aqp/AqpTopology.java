@@ -52,7 +52,7 @@ public class AqpTopology {
             // If we have two supervisors with 4 allocated workers each, and this topology is
             // submitted to the master (Nimbus) node, then these 8 workers will be distributed
             // to the two supervisors evenly: four each.
-            conf.setNumWorkers(4);
+            conf.setNumWorkers(8);
 
             // create the topology and submit with config
             StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
