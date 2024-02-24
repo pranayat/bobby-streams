@@ -119,9 +119,9 @@ public class GridCellAssignerBolt extends BaseRichBolt {
 
                 // stream_1, (25,35) (lat,long) ...
                 _collector.emit(tupleStreamId, input, new Values(values.toArray()));
-                _collector.ack(input);
             }
         }
+        _collector.ack(input);
     }
 
     @Override
