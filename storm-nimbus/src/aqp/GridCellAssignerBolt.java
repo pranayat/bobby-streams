@@ -83,7 +83,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple input) {
         List<Object> values;
-        String tupleStreamId = input.getSourceStreamId();
+        String tupleStreamId = input.getStringByField("streamId");
         Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
 
 
@@ -106,19 +106,18 @@ public class GridCellAssignerBolt extends BaseRichBolt {
                     }
                 }
 
-                TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-                List<Double> coordinates = tupleWrapper.getCoordinates(input);
                 List<Double> centroid = new ArrayList<>();
                 // for cube [2,3] cell length 10 with centroid [2*10 + 10/2, 3*10 + 10/2 ][25, 35]
                 for (int axisOffset : cubeLabel) {
                     centroid.add((double) (axisOffset * queryGroup.getCellLength() + queryGroup.getCellLength() / 2));
                 }
 
+                values.add(tupleStreamId);
                 values.add(centroid.toString()); // cluster Id eg. (25, 35)
                 values.add(queryGroup.getName()); // query group Id eg. (lat, long)
 
                 // stream_1, (25,35) (lat,long) ...
-                _collector.emit(tupleStreamId, input, new Values(values.toArray()));
+                _collector.emit(input, new Values(values.toArray()));
             }
         }
         _collector.ack(input);
@@ -126,11 +125,11 @@ public class GridCellAssignerBolt extends BaseRichBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            List<String> fields = new ArrayList<String>(stream.getFieldNames());
-            fields.add("clusterId"); // centroid of cube in this case
-            fields.add("queryGroupName");
-            declarer.declareStream(stream.getId(), new Fields(fields));
-        }
+        Stream stream = this.schemaConfig.getStreams().get(0);
+        List<String> fields = new ArrayList<String>(stream.getFieldNames());
+        fields.add("streamId");
+        fields.add("clusterId"); // centroid of cube in this case
+        fields.add("queryGroupName");
+        declarer.declare(new Fields(fields));
     }
 }

@@ -28,21 +28,33 @@ public class BPlusTree {
         Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
             @Override
             public int compare(DictionaryPair o1, DictionaryPair o2) {
-                Double a = Double.valueOf(o1.key);
-                Double b = Double.valueOf(o2.key);
-                return a.compareTo(b);
+                try {
+                    Double a = Double.valueOf(o1.key);
+                    Double b = Double.valueOf(o2.key);
+                    return a.compareTo(b);
+                } catch (Exception e) {
+                    System.out.println(e);
+                }
+                return 1;
             }
         };
         return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, null), c);
     }
 
     private List<Integer> binarySearchDuplicates(DictionaryPair[] dps, int numPairs, double t) {
-        Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
+        Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {            
             @Override
             public int compare(DictionaryPair o1, DictionaryPair o2) {
-                Double a = Double.valueOf(o1.key);
-                Double b = Double.valueOf(o2.key);
-                return a.compareTo(b);
+                try {
+                    Double a = Double.valueOf(o1.key);
+                    Double b = Double.valueOf(o2.key);
+                    return a.compareTo(b);
+                } catch (Exception e) {
+                    // started seeing this off by one error for
+                    // numPairs is 11 and actual number of pairs in dict is 10 followed by nulls
+                    // so it trys to get key of null
+                    return -1;
+                }
             }
         };
 

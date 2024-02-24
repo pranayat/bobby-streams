@@ -46,11 +46,9 @@ public class KMeansClusterAssignerBolt extends BaseWindowedBolt {
 
             for (Cluster cluster : clusters) {
                 for (Tuple tuple : cluster.getTuples()) {
-                    String tupleStreamId = tuple.getSourceStreamId();
+                    String tupleStreamId = tuple.getStringByField("streamId");
                     Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
-                    List<Object> values;
-
-                    values = new ArrayList<Object>();
+                    List<Object> values = new ArrayList<Object>();
                     for (Field field : tupleStream.getFields()) {
                         if (field.getType().equals("double")) {
                             values.add(tuple.getDoubleByField(field.getName()));
@@ -58,12 +56,12 @@ public class KMeansClusterAssignerBolt extends BaseWindowedBolt {
                             values.add(tuple.getStringByField(field.getName()));
                         }
                     }
-
+                    values.add(tupleStreamId);
                     values.add(cluster.getCentroid().toString()); // cluster Id eg. (25, 35)
                     values.add(queryGroup.getName()); // query group Id eg. (lat, long)
 
                     // stream_1, (25,35) (lat,long) ...
-                    _collector.emit(tupleStreamId, tuple, new Values(values.toArray()));
+                    _collector.emit(tuple, new Values(values.toArray()));
                     _collector.ack(tuple);
                 }
             }
@@ -72,11 +70,11 @@ public class KMeansClusterAssignerBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            List<String> fields = new ArrayList<String>(stream.getFieldNames());
-            fields.add("clusterId"); // centroid of cluster in this case
-            fields.add("queryGroupName");
-            declarer.declareStream(stream.getId(), new Fields(fields));
-        }
+        Stream stream = this.schemaConfig.getStreams().get(0);
+        List<String> fields = new ArrayList<String>(stream.getFieldNames());
+        fields.add("streamId");
+        fields.add("clusterId"); // centroid of cube in this case
+        fields.add("queryGroupName");
+        declarer.declare(new Fields(fields));
     }
 }

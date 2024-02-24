@@ -99,9 +99,13 @@ public class JoinerBolt extends BaseWindowedBolt {
             double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
                     tupleWrapper.getCoordinates(expiredTuple, queryGroup.getDistance() instanceof CosineDistance));
 
-            // deleting by iDistance key alone could result in deleting false positives, so pass tupleId as well
-            bPlusTree.delete(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance,
-                    expiredTuple.getStringByField("tupleId"));
+            try {
+                // deleting by iDistance key alone could result in deleting false positives, so pass tupleId as well
+                bPlusTree.delete(cluster.getI() * queryGroup.getC() + queryTupleToCentroidDistance,
+                        expiredTuple.getStringByField("tupleId"));
+            } catch(Exception e) {
+                System.out.println(e);
+            }
         }
     }
 
@@ -146,7 +150,7 @@ public class JoinerBolt extends BaseWindowedBolt {
                 String joinId = String.join("+", tupleIds);
 
                 for (Tuple joinResult : joinResults) {
-                    _collector.emit(joinResult.getSourceStreamId(), tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getSourceStreamId()));
+                    _collector.emit(tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
                 }
             }
             

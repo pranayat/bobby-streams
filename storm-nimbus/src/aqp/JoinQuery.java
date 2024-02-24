@@ -61,7 +61,7 @@ public class JoinQuery {
 
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : joinCandidates) {
-            if (streamToJoin.equals(joinCandidate.getSourceStreamId())) {
+            if (streamToJoin.equals(joinCandidate.getStringByField("streamId"))) {
                 // iDistance has false positives as the index is simply distance from cluster center
                 boolean isFalsePositive = this.distance.calculate(tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance),
                         tupleWrapper.getCoordinates(joinCandidate, this.distance instanceof CosineDistance)) > this.getRadius();
@@ -151,12 +151,12 @@ public class JoinQuery {
 
     public List<Tuple> execute(Tuple tuple, QueryGroup queryGroup) {
         List<String> unjoinedStreams = this.streamIds.stream()
-                .filter(s -> !s.equals(tuple.getSourceStreamId())).collect(Collectors.toList()); // [b, c]
+                .filter(s -> !s.equals(tuple.getStringByField("streamId"))).collect(Collectors.toList()); // [b, c]
 
         Map<Tuple, List<Tuple>> joinPartnersForTuple = new HashMap<>();
         joinPartnersForTuple.put(tuple, new ArrayList<>()); // { a1: [] }
         Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream = new HashMap<>();
-        joinPartnersByStream.put(tuple.getSourceStreamId(), joinPartnersForTuple); // { a: { a1: [] } }
+        joinPartnersByStream.put(tuple.getStringByField("streamId"), joinPartnersForTuple); // { a: { a1: [] } }
 
         for (String streamToJoin : unjoinedStreams) { // c
 

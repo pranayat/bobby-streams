@@ -30,20 +30,18 @@ public class PartitionAssignerBolt extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
-        String tupleStreamId = input.getSourceStreamId();
+        String tupleStreamId = input.getStringByField("streamId");
         // TODO emit by partitionId; instead of shuffle grouping (clusterId, queryGroupName) assign these to partitions
-        _collector.emit(tupleStreamId, input.getValues());
+        _collector.emit(input.getValues());
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-
-        for (Stream stream : this.schemaConfig.getStreams()) {
-            // different streams may have different fields
-            List<String> fields = new ArrayList<String>(stream.getFieldNames());
-            fields.add("clusterId");
-            fields.add("queryGroupName");
-            declarer.declareStream(stream.getId(), new Fields(fields));
-        }
+        Stream stream = this.schemaConfig.getStreams().get(0);
+        List<String> fields = new ArrayList<String>(stream.getFieldNames());
+        fields.add("streamId");
+        fields.add("clusterId"); // centroid of cube in this case
+        fields.add("queryGroupName");
+        declarer.declare(new Fields(fields));
     }
 }
