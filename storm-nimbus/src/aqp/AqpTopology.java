@@ -48,6 +48,7 @@ public class AqpTopology {
 
         Config conf = new Config();
         conf.setDebug(false);
+        conf.setMessageTimeoutSecs(600);
 
         if (args != null && args.length > 0) {
 
