@@ -39,7 +39,7 @@ public class AqpTopology {
 
         // can have multiple instances, but not more than the number of clusters
         BoltDeclarer joinerBolt = builder.setBolt("joiner",
-                new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 4);
+                new JoinerBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 1);
         joinerBolt.partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         // joinerBolt.fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
@@ -56,7 +56,7 @@ public class AqpTopology {
             // submitted to the master (Nimbus) node, then these 8 workers will be
             // distributed
             // to the two supervisors evenly: four each.
-            conf.setNumWorkers(8);
+            conf.setNumWorkers(4);
 
             // create the topology and submit with config
             StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
