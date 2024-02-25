@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 public class SchemaConfig implements Serializable {
 
+    private static final long serialVersionUID = 1234567L;
+
     @JsonProperty("streams")
     private List<Stream> streams;
 
@@ -49,6 +51,8 @@ public class SchemaConfig implements Serializable {
 
 class Stream implements Serializable {
 
+    private static final long serialVersionUID = 1234567L;
+
     @JsonProperty("id")
     private String id;
 
@@ -81,6 +85,9 @@ class Stream implements Serializable {
 }
 
 class Field implements Serializable {
+
+    private static final long serialVersionUID = 1234567L;
+
     @JsonProperty("name")
     private String name;
 
@@ -97,6 +104,8 @@ class Field implements Serializable {
 }
 
 class Clustering implements Serializable {
+
+    private static final long serialVersionUID = 1234567L;
 
     @JsonProperty("type")
     private String type;
@@ -121,6 +130,8 @@ class Clustering implements Serializable {
 }
 
 class Query implements Serializable {
+
+    private static final long serialVersionUID = 1234567L;
 
     @JsonProperty("id")
     private String id;
@@ -148,6 +159,8 @@ class Query implements Serializable {
 }
 
 class Stage implements Serializable {
+
+    private static final long serialVersionUID = 1234567L;
 
     @JsonProperty("type")
     private String type;
