@@ -43,6 +43,8 @@ public class AqpTopology {
         joinerBolt.partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         // joinerBolt.fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
+        builder.setBolt("printer", new PrinterBolt(), 1).shuffleGrouping("joiner");
+
         Config conf = new Config();
         conf.setDebug(false);
 
