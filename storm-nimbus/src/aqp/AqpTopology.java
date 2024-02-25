@@ -6,6 +6,7 @@ import org.apache.storm.StormSubmitter;
 import org.apache.storm.topology.BoltDeclarer;
 import org.apache.storm.topology.TopologyBuilder;
 import org.apache.storm.topology.base.BaseWindowedBolt;
+import org.apache.storm.topology.base.BaseWindowedBolt.Count;
 import org.apache.storm.tuple.Fields;
 
 public class AqpTopology {
@@ -39,7 +40,7 @@ public class AqpTopology {
 
         // can have multiple instances, but not more than the number of clusters
         BoltDeclarer JBolt = builder.setBolt("jBolt",
-                new JBolt().withWindow(new BaseWindowedBolt.Count(10), new BaseWindowedBolt.Count(1)), 1);
+                new JBolt().withWindow(Count.of(30), Count.of(10)), 1);
         JBolt.partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         // JBolt.fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
