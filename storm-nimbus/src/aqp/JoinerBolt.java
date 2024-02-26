@@ -16,14 +16,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class JBolt extends BaseWindowedBolt {
+public class JoinerBolt extends BaseWindowedBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
-    private static final Logger LOG = LoggerFactory.getLogger(JBolt.class);
+    private static final Logger LOG = LoggerFactory.getLogger(JoinerBolt.class);
 
-    public JBolt() {
+    public JoinerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -114,57 +114,54 @@ public class JBolt extends BaseWindowedBolt {
 
     @Override
     public void execute(TupleWindow inputWindow) {
-        List<Tuple> tuplesInWindow = inputWindow.get();
-        LOG.debug("Events in current window: " + tuplesInWindow.size()); 
 
-        _collector.emit(new Values("foo", "bar", "here"));
-        // for (Tuple tuple : inputWindow.getNew()) {
-        //     QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-        //     TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-        //     String clusterId = tuple.getStringByField("clusterId");
-        //     Cluster cluster = queryGroup.getCluster(clusterId);
+        for (Tuple tuple : inputWindow.getNew()) {
+            QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+            TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
+            String clusterId = tuple.getStringByField("clusterId");
+            Cluster cluster = queryGroup.getCluster(clusterId);
 
-        //     if (cluster != null) {
-        //         cluster.addTuple(tuple);
-        //     } else {
-        //         cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
-        //         cluster.addTuple(tuple);
-        //         queryGroup.setCluster(clusterId, cluster);
-        //     }
-        // }
+            if (cluster != null) {
+                cluster.addTuple(tuple);
+            } else {
+                cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
+                cluster.addTuple(tuple);
+                queryGroup.setCluster(clusterId, cluster);
+            }
+        }
 
-        // for (Tuple tuple : inputWindow.getNew()) {
-        //     QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+        for (Tuple tuple : inputWindow.getNew()) {
+            QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
-        //     // if we don't replicate to adjacent cells, this check is not needed, it will always return false (I verified this)
-        //     // we had replicated the tuple to adjacent clusters since we didn't know which joiner bolt (partition) it would end up in
-        //     // now since it might have ended up in the same joiner bolt instance, we check all clusters of this query group for this tuple
-        //     // so as to insert it only once into the B+tree of this query group
-        //     if (this.isTupleInQueryGroupTree(tuple, queryGroup)) {
-        //         // already in tree and also hence already called joinQuery.execute on it
-        //         continue;
-        //     }
+            // if we don't replicate to adjacent cells, this check is not needed, it will always return false (I verified this)
+            // we had replicated the tuple to adjacent clusters since we didn't know which joiner bolt (partition) it would end up in
+            // now since it might have ended up in the same joiner bolt instance, we check all clusters of this query group for this tuple
+            // so as to insert it only once into the B+tree of this query group
+            if (this.isTupleInQueryGroupTree(tuple, queryGroup)) {
+                // already in tree and also hence already called joinQuery.execute on it
+                continue;
+            }
 
-        //     for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-        //         List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
-        //         List<String> tupleIds = new ArrayList<>();
-        //         for (Tuple joinResult : joinResults) {
-        //             tupleIds.add(joinResult.getStringByField("tupleId"));
-        //         }
+            for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+                List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
+                List<String> tupleIds = new ArrayList<>();
+                for (Tuple joinResult : joinResults) {
+                    tupleIds.add(joinResult.getStringByField("tupleId"));
+                }
 
-        //         Collections.sort(tupleIds);
-        //         String joinId = String.join("+", tupleIds);
+                Collections.sort(tupleIds);
+                String joinId = String.join("+", tupleIds);
 
-        //         for (Tuple joinResult : joinResults) {
-        //             _collector.emit(new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
-        //         }
-        //     }
+                for (Tuple joinResult : joinResults) {
+                    _collector.emit(tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+                }
+            }
             
-        //     // index the tuple
-        //     this.insertIntoQueryGroupTree(tuple, queryGroup);
-        // }
+            // index the tuple
+            this.insertIntoQueryGroupTree(tuple, queryGroup);
+        }
 
-        // this.deleteExpiredTuplesFromTree(inputWindow.getExpired());
+        this.deleteExpiredTuplesFromTree(inputWindow.getExpired());
     }
 
     @Override

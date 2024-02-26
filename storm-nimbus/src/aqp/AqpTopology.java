@@ -39,14 +39,14 @@ public class AqpTopology {
         }
 
         // can have multiple instances, but not more than the number of clusters
-        builder.setBolt("jBolt", new JBolt()
+        builder.setBolt("JoinerBolt", new JoinerBolt()
             .withWindow(Count.of(30)), 1)
             .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
-        builder.setBolt("printer", new PrinterBolt(), 1).shuffleGrouping("jBolt");
+        builder.setBolt("printer", new PrinterBolt(), 1).shuffleGrouping("JoinerBolt");
 
         Config conf = new Config();
-        conf.setDebug(true);
+        conf.setDebug(false);
         conf.setMessageTimeoutSecs(600);
 
         if (args != null && args.length > 0) {
