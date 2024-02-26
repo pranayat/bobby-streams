@@ -519,6 +519,7 @@ public class BPlusTree {
 
                 // Successfully delete the dictionary pair
                 ln.delete(dpIndex);
+                System.out.println("DELETE SUCCESSFUL");
 
                 // Check for deficiencies
                 if (ln.isDeficient()) {
@@ -624,6 +625,7 @@ public class BPlusTree {
                     sortDictionary(ln.dictionary);
 
                 }
+                System.out.println("DELETE ENDED");
             }
         }
     }
