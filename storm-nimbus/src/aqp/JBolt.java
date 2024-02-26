@@ -8,6 +8,8 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,6 +21,7 @@ public class JBolt extends BaseWindowedBolt {
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
+    private static final Logger LOG = LoggerFactory.getLogger(JBolt.class);
 
     public JBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
@@ -111,9 +114,10 @@ public class JBolt extends BaseWindowedBolt {
 
     @Override
     public void execute(TupleWindow inputWindow) {
-        for (Tuple tuple : inputWindow.getNew()) {
-            _collector.emit(new Values("foo", "bar", "here"));
-        }
+        List<Tuple> tuplesInWindow = inputWindow.get();
+        LOG.debug("Events in current window: " + tuplesInWindow.size()); 
+
+        _collector.emit(new Values("foo", "bar", "here"));
         // for (Tuple tuple : inputWindow.getNew()) {
         //     QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
         //     TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
