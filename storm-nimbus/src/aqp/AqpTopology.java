@@ -39,49 +39,28 @@ public class AqpTopology {
         }
 
         // can have multiple instances, but not more than the number of clusters
-        BoltDeclarer JBolt = builder.setBolt("jBolt",
-                new JBolt().withWindow(Count.of(30), Count.of(10)), 1);
-        JBolt.partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
-        // JBolt.fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
+        builder.setBolt("jBolt", new JBolt()
+            .withWindow(Count.of(30)), 1)
+            .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
         builder.setBolt("printer", new PrinterBolt(), 1).shuffleGrouping("jBolt");
 
         Config conf = new Config();
-        conf.setDebug(false);
+        conf.setDebug(true);
         conf.setMessageTimeoutSecs(600);
 
         if (args != null && args.length > 0) {
-
-            // run it in a live cluster
-
-            // set the number of workers for running all spout and bolt tasks
-            // If we have two supervisors with 4 allocated workers each, and this topology
-            // is
-            // submitted to the master (Nimbus) node, then these 8 workers will be
-            // distributed
-            // to the two supervisors evenly: four each.
             conf.setNumWorkers(4);
-
-            // create the topology and submit with config
             StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
 
         } else {
 
-            // run it in a simulated local cluster
-
-            // create the local cluster instance
             LocalCluster cluster = new LocalCluster();
-
-            // submit the topology to the local cluster
             cluster.submitTopology("aqp", conf, builder.createTopology());
-
-            // let the topology run for 100 minutes. note topologies never terminate!
             Thread.sleep(6000000);
 
             System.out.println("End Topology");
             // cluster.killTopology("aqp");
-
-            // we are done, so shutdown the local cluster
             // cluster.shutdown();
         }
     }
