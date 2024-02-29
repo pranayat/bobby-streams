@@ -28,14 +28,9 @@ public class BPlusTree {
         Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {
             @Override
             public int compare(DictionaryPair o1, DictionaryPair o2) {
-                try {
-                    Double a = Double.valueOf(o1.key);
-                    Double b = Double.valueOf(o2.key);
-                    return a.compareTo(b);
-                } catch (Exception e) {
-                    System.out.println(e);
-                }
-                return 1;
+                Double a = Double.valueOf(o1.key);
+                Double b = Double.valueOf(o2.key);
+                return a.compareTo(b);
             }
         };
         return Arrays.binarySearch(dps, 0, numPairs, new DictionaryPair(t, null), c);
@@ -52,10 +47,6 @@ public class BPlusTree {
                     b = Double.valueOf(o2.key);
                     return a.compareTo(b);
                 } catch (Exception e) {
-                    System.out.println("COMPARATOR ERROR");
-                    System.out.println(a);
-                    System.out.println(b);
-                    System.out.println(numPairs);
                     // started seeing this off by one error for
                     // numPairs is 11 and actual number of pairs in dict is 10 followed by nulls
                     // so it trys to get key of null
@@ -494,6 +485,10 @@ public class BPlusTree {
      *                         to delete the intended tuple
      */
     public void delete(double key, String tupleIdToDelete) {
+        System.out.println("NUMPAIRS " + this.firstLeaf.numPairs);
+        if (this.firstLeaf.rightSibling != null) {
+            System.out.println("RIGHT SIBLING NUMPAIRS " + this.firstLeaf.rightSibling.numPairs);
+        }
         if (isEmpty()) {
 
             /* Flow of execution goes here when B+ tree has no dictionary pairs */
@@ -516,9 +511,6 @@ public class BPlusTree {
             }
 
             if (dpIndex < 0) {
-                System.out.println("tupleIdToDelete: " + tupleIdToDelete);
-                System.out.println("dpIndices.size(): " + dpIndices.size());
-                System.out.println("dpIndices: " + dpIndices);
                 /* Flow of execution goes here when key is absent in B+ tree */
 
                 System.err.println("Invalid Delete: Key unable to be found.");
