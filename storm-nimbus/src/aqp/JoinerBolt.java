@@ -115,20 +115,20 @@ public class JoinerBolt extends BaseWindowedBolt {
     @Override
     public void execute(TupleWindow inputWindow) {
 
-        for (Tuple tuple : inputWindow.getNew()) {
-            QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-            TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-            String clusterId = tuple.getStringByField("clusterId");
-            Cluster cluster = queryGroup.getCluster(clusterId);
+        // for (Tuple tuple : inputWindow.getNew()) {
+        //     QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+        //     TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
+        //     String clusterId = tuple.getStringByField("clusterId");
+        //     Cluster cluster = queryGroup.getCluster(clusterId);
 
-            if (cluster != null) {
-                cluster.addTuple(tuple);
-            } else {
-                cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
-                cluster.addTuple(tuple);
-                queryGroup.setCluster(clusterId, cluster);
-            }
-        }
+        //     if (cluster != null) {
+        //         cluster.addTuple(tuple);
+        //     } else {
+        //         cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
+        //         cluster.addTuple(tuple);
+        //         queryGroup.setCluster(clusterId, cluster);
+        //     }
+        // }
 
         for (Tuple tuple : inputWindow.getNew()) {
             QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
