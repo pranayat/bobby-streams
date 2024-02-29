@@ -45,11 +45,17 @@ public class BPlusTree {
         Comparator<DictionaryPair> c = new Comparator<DictionaryPair>() {            
             @Override
             public int compare(DictionaryPair o1, DictionaryPair o2) {
+                Double a = null;
+                Double b = null;
                 try {
-                    Double a = Double.valueOf(o1.key);
-                    Double b = Double.valueOf(o2.key);
+                    a = Double.valueOf(o1.key);
+                    b = Double.valueOf(o2.key);
                     return a.compareTo(b);
                 } catch (Exception e) {
+                    System.out.println("COMPARATOR ERROR");
+                    System.out.println(a);
+                    System.out.println(b);
+                    System.out.println(numPairs);
                     // started seeing this off by one error for
                     // numPairs is 11 and actual number of pairs in dict is 10 followed by nulls
                     // so it trys to get key of null
@@ -501,6 +507,9 @@ public class BPlusTree {
             List<Integer> dpIndices = binarySearchDuplicates(ln.dictionary, ln.numPairs, key);
             int dpIndex = -1;
 
+            System.out.println("tupleIdToDelete: " + tupleIdToDelete);
+            System.out.println("dpIndices.size(): " + dpIndices.size());
+            System.out.println("dpIndices: " + dpIndices);
             // filter duplicates to get index of tuple to delete
             for (int index : dpIndices) {
                 if (ln.dictionary[index].value.getStringByField("tupleId").equals(tupleIdToDelete)) {
@@ -519,7 +528,6 @@ public class BPlusTree {
 
                 // Successfully delete the dictionary pair
                 ln.delete(dpIndex);
-                System.out.println("DELETE SUCCESSFUL");
 
                 // Check for deficiencies
                 if (ln.isDeficient()) {
@@ -625,7 +633,6 @@ public class BPlusTree {
                     sortDictionary(ln.dictionary);
 
                 }
-                System.out.println("DELETE ENDED");
             }
         }
     }
