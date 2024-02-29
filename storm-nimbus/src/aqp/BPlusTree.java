@@ -485,7 +485,6 @@ public class BPlusTree {
      *                         to delete the intended tuple
      */
     public void delete(double key, String tupleIdToDelete) {
-        System.out.println("NUMPAIRS " + this.firstLeaf.numPairs);
         if (this.firstLeaf.rightSibling != null) {
             System.out.println("RIGHT SIBLING NUMPAIRS " + this.firstLeaf.rightSibling.numPairs);
         }
