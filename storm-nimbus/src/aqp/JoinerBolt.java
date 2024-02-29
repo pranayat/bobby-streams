@@ -115,29 +115,29 @@ public class JoinerBolt extends BaseWindowedBolt {
     @Override
     public void execute(TupleWindow inputWindow) {
 
-        // for (Tuple tuple : inputWindow.getNew()) {
-        //     QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-        //     TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-        //     String clusterId = tuple.getStringByField("clusterId");
-        //     Cluster cluster = queryGroup.getCluster(clusterId);
-
-        //     if (cluster != null) {
-        //         cluster.addTuple(tuple);
-        //     } else {
-        //         cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
-        //         cluster.addTuple(tuple);
-        //         queryGroup.setCluster(clusterId, cluster);
-        //     }
-        // }
-
         for (Tuple tuple : inputWindow.getNew()) {
             QueryGroup queryGroup = this.getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+            TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
+            String clusterId = tuple.getStringByField("clusterId");
+            Cluster cluster = queryGroup.getCluster(clusterId);
+
+            if (cluster != null) {
+                cluster.expandRadiusWithTuple(tuple);
+            } else {
+                cluster = new Cluster(convertClusterIdToCentroid(clusterId), tupleWrapper);
+                cluster.expandRadiusWithTuple(tuple);
+                queryGroup.setCluster(clusterId, cluster);
+            }
+        }
+
+        for (Tuple tuple : inputWindow.getNew()) {
+            QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
             // if we don't replicate to adjacent cells, this check is not needed, it will always return false (I verified this)
             // we had replicated the tuple to adjacent clusters since we didn't know which joiner bolt (partition) it would end up in
             // now since it might have ended up in the same joiner bolt instance, we check all clusters of this query group for this tuple
             // so as to insert it only once into the B+tree of this query group
-            if (this.isTupleInQueryGroupTree(tuple, queryGroup)) {
+            if (isTupleInQueryGroupTree(tuple, queryGroup)) {
                 // already in tree and also hence already called joinQuery.execute on it
                 continue;
             }
@@ -158,10 +158,10 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
             
             // index the tuple
-            this.insertIntoQueryGroupTree(tuple, queryGroup);
+            insertIntoQueryGroupTree(tuple, queryGroup);
         }
 
-        this.deleteExpiredTuplesFromTree(inputWindow.getExpired());
+        deleteExpiredTuplesFromTree(inputWindow.getExpired());
     }
 
     @Override
