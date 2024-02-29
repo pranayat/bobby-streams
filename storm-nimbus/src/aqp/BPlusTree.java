@@ -507,9 +507,6 @@ public class BPlusTree {
             List<Integer> dpIndices = binarySearchDuplicates(ln.dictionary, ln.numPairs, key);
             int dpIndex = -1;
 
-            System.out.println("tupleIdToDelete: " + tupleIdToDelete);
-            System.out.println("dpIndices.size(): " + dpIndices.size());
-            System.out.println("dpIndices: " + dpIndices);
             // filter duplicates to get index of tuple to delete
             for (int index : dpIndices) {
                 if (ln.dictionary[index].value.getStringByField("tupleId").equals(tupleIdToDelete)) {
@@ -519,7 +516,9 @@ public class BPlusTree {
             }
 
             if (dpIndex < 0) {
-
+                System.out.println("tupleIdToDelete: " + tupleIdToDelete);
+                System.out.println("dpIndices.size(): " + dpIndices.size());
+                System.out.println("dpIndices: " + dpIndices);
                 /* Flow of execution goes here when key is absent in B+ tree */
 
                 System.err.println("Invalid Delete: Key unable to be found.");
