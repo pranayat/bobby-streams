@@ -8,8 +8,6 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,7 +19,6 @@ public class JoinerBolt extends BaseWindowedBolt {
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
-    private static final Logger LOG = LoggerFactory.getLogger(JoinerBolt.class);
 
     public JoinerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
@@ -153,7 +150,11 @@ public class JoinerBolt extends BaseWindowedBolt {
                 String joinId = String.join("+", tupleIds);
 
                 for (Tuple joinResult : joinResults) {
-                    _collector.emit(tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+                    _collector.emit("resultStream", tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+                }
+
+                if (joinResults.size() == 0) {
+                    _collector.emit("noResultStream", tuple, new Values(tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
                 }
             }
             
@@ -161,11 +162,13 @@ public class JoinerBolt extends BaseWindowedBolt {
             insertIntoQueryGroupTree(tuple, queryGroup);
         }
 
+        // TODO shrink cluster radius, and what if we don't do it ?
         deleteExpiredTuplesFromTree(inputWindow.getExpired());
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("joinId", "tupleId", "streamId"));
+        declarer.declareStream("resultStream", new Fields("joinId", "tupleId", "streamId"));
+        declarer.declareStream("noResultStream", new Fields("tupleId", "streamId"));
     }
 }

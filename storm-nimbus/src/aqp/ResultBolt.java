@@ -5,11 +5,11 @@ import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseBasicBolt;
 import org.apache.storm.tuple.Tuple;
 
-public class PrinterBolt extends BaseBasicBolt {
+public class ResultBolt extends BaseBasicBolt {
 
   @Override
   public void execute(Tuple tuple, BasicOutputCollector collector) {
-      // System.out.println(tuple);
+      // this bolt is only for acking join result tuples from JoinerBolt
   }
 
   @Override

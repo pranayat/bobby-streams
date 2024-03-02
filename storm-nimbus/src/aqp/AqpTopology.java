@@ -32,25 +32,26 @@ public class AqpTopology {
             }
         } else {
             // can have multiple instances as entire data is not needed for clustering
-            BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
+            BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 2);
             for (Stream stream : schemaConfig.getStreams()) {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
         }
 
         // can have multiple instances, but not more than the number of clusters
-        builder.setBolt("JoinerBolt", new JoinerBolt()
-            .withWindow(Count.of(30)), 1)
+        builder.setBolt("joiner", new JoinerBolt()
+            .withWindow(Count.of(100)), 2)
             .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
-        builder.setBolt("printer", new PrinterBolt(), 2).shuffleGrouping("JoinerBolt");
+        builder.setBolt("result", new ResultBolt(), 2).shuffleGrouping("joiner", "resultStream");
+        builder.setBolt("noResult", new NoResultBolt(), 2).shuffleGrouping("joiner", "noResultStream");
 
         Config conf = new Config();
         conf.setDebug(false);
         conf.setMessageTimeoutSecs(600);
 
         if (args != null && args.length > 0) {
-            conf.setNumWorkers(4);
+            conf.setNumWorkers(6);
             StormSubmitter.submitTopology(args[0], conf, builder.createTopology());
 
         } else {
