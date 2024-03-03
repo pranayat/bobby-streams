@@ -38,7 +38,7 @@ public class AqpTopology {
             }
         }
 
-        builder.setBolt("joiner", new NoIndexJoinerBolt()
+        builder.setBolt("joiner", new JoinerBolt()
             .withWindow(Count.of(100)), 2)
             .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
@@ -60,8 +60,8 @@ public class AqpTopology {
             Thread.sleep(6000000);
 
             System.out.println("End Topology");
-            // cluster.killTopology("aqp");
-            // cluster.shutdown();
+            cluster.killTopology("aqp");
+            cluster.shutdown();
         }
     }
 }
