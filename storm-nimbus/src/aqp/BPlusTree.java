@@ -113,12 +113,18 @@ public class BPlusTree {
 
     private LeafNode findLeafNode(InternalNode node, double key) {
 
+        Double[] keys = null;
+        keys = node.keys;
         // Initialize keys and index variable
-        Double[] keys = node.keys;
         int i;
 
         // Find next node on path to appropriate leaf node
         for (i = 0; i < node.degree - 1; i++) {
+            // encountered a null hole, ignore and keep looking
+            if (keys[i] == null) {
+                i += 1;
+                continue;
+            }
             if (key < keys[i]) {
                 break;
             }
@@ -485,9 +491,6 @@ public class BPlusTree {
      *                         to delete the intended tuple
      */
     public void delete(double key, String tupleIdToDelete) {
-        if (this.firstLeaf.rightSibling != null) {
-            System.out.println("RIGHT SIBLING NUMPAIRS " + this.firstLeaf.rightSibling.numPairs);
-        }
         if (isEmpty()) {
 
             /* Flow of execution goes here when B+ tree has no dictionary pairs */
@@ -1031,7 +1034,6 @@ public class BPlusTree {
 
             // Delete dictionary pair from leaf
             this.dictionary[index] = null;
-
             // Decrement numPairs
             numPairs--;
         }
