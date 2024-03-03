@@ -684,7 +684,21 @@ public class BPlusTree {
                     // Add new key to parent for proper indexing
                     double newParentKey = halfDict[0].key;
                     ln.parent.keys[ln.parent.degree - 1] = newParentKey;
-                    Arrays.sort(ln.parent.keys, 0, ln.parent.degree);
+                    Arrays.sort(ln.parent.keys, 0, ln.parent.degree, new Comparator<Double>() {
+                        @Override
+                        public int compare(Double o1, Double o2) {
+                            if (o1 == null && o2 == null) {
+                                return 0;
+                            }
+                            if (o1 == null) {
+                                return 1;
+                            }
+                            if (o2 == null) {
+                                return -1;
+                            }
+                            return o1.compareTo(o2);
+                        }
+                    });
                 }
 
                 // Create new LeafNode that holds the other half
