@@ -766,8 +766,8 @@ public class BPlusTree {
         // Instantiate Tuple array to hold values
         ArrayList<Tuple> values = new ArrayList<Tuple>();
 
-        // Iterate through the doubly linked list of leaves
-        LeafNode currNode = this.firstLeaf;
+        // Find leaf node that holds the lowerbound key and then search rightwards
+        LeafNode currNode = (this.root == null) ? this.firstLeaf : findLeafNode(lowerBound);
         while (currNode != null) {
 
             // Iterate through the dictionary of each node
