@@ -49,7 +49,8 @@ public class JoinQuery {
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : window) {
             if (streamToJoin.equals(joinCandidate.getStringByField("streamId"))) {
-                if (this.distance.calculate(tupleWrapper.getCoordinates(tuple), tupleWrapper.getCoordinates(joinCandidate)) <= this.getRadius()) {
+                if (this.distance.calculate(tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance),
+                tupleWrapper.getCoordinates(joinCandidate, this.distance instanceof CosineDistance)) <= this.getRadius()) {
                     joinCandidatesFromOtherStreams.add(joinCandidate);
                 }
             }
