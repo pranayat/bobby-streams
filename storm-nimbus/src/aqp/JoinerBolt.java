@@ -127,17 +127,14 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
         }
 
+        // getNew() will return the one new tuple that slides in
         for (Tuple tuple : inputWindow.getNew()) {
             QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
-            // if we don't replicate to adjacent cells, this check is not needed, it will always return false (I verified this)
-            // we had replicated the tuple to adjacent clusters since we didn't know which joiner bolt (partition) it would end up in
-            // now since it might have ended up in the same joiner bolt instance, we check all clusters of this query group for this tuple
-            // so as to insert it only once into the B+tree of this query group
-            if (isTupleInQueryGroupTree(tuple, queryGroup)) {
-                // already in tree and also hence already called joinQuery.execute on it
-                continue;
-            }
+            // needed only if replicating to  adjacent cells
+            // if (isTupleInQueryGroupTree(tuple, queryGroup)) {
+            //     continue;
+            // }
 
             for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                 List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
