@@ -38,8 +38,7 @@ public class AqpTopology {
             }
         }
 
-        // can have multiple instances, but not more than the number of clusters
-        builder.setBolt("joiner", new JoinerBolt()
+        builder.setBolt("joiner", new NoIndexJoinerBolt()
             .withWindow(Count.of(100)), 2)
             .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
