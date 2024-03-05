@@ -33,7 +33,7 @@ public class QueryGroup {
         this.streamIds = new HashSet<>();
         this.joinQueries = new ArrayList<>();
         this.clusterMap = new HashMap<>();
-        this.bPlusTree = new BPlusTree(12);
+        this.bPlusTree = new BPlusTree(512);
         this.distance = distance;
         this.iDistance = iDistance;
     }

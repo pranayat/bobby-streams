@@ -113,18 +113,12 @@ public class BPlusTree {
 
     private LeafNode findLeafNode(InternalNode node, double key) {
 
-        Double[] keys = null;
-        keys = node.keys;
         // Initialize keys and index variable
+        Double[] keys = node.keys;
         int i;
 
         // Find next node on path to appropriate leaf node
         for (i = 0; i < node.degree - 1; i++) {
-            // encountered a null hole, ignore and keep looking
-            if (keys[i] == null) {
-                i += 1;
-                continue;
-            }
             if (key < keys[i]) {
                 break;
             }
@@ -684,21 +678,7 @@ public class BPlusTree {
                     // Add new key to parent for proper indexing
                     double newParentKey = halfDict[0].key;
                     ln.parent.keys[ln.parent.degree - 1] = newParentKey;
-                    Arrays.sort(ln.parent.keys, 0, ln.parent.degree, new Comparator<Double>() {
-                        @Override
-                        public int compare(Double o1, Double o2) {
-                            if (o1 == null && o2 == null) {
-                                return 0;
-                            }
-                            if (o1 == null) {
-                                return 1;
-                            }
-                            if (o2 == null) {
-                                return -1;
-                            }
-                            return o1.compareTo(o2);
-                        }
-                    });
+                    Arrays.sort(ln.parent.keys, 0, ln.parent.degree);
                 }
 
                 // Create new LeafNode that holds the other half
@@ -783,8 +763,8 @@ public class BPlusTree {
         // Instantiate Tuple array to hold values
         ArrayList<Tuple> values = new ArrayList<Tuple>();
 
-        // Find leaf node that holds the lowerbound key and then search rightwards
-        LeafNode currNode = (this.root == null) ? this.firstLeaf : findLeafNode(lowerBound);
+        // Iterate through the doubly linked list of leaves
+        LeafNode currNode = this.firstLeaf;
         while (currNode != null) {
 
             // Iterate through the dictionary of each node
