@@ -40,11 +40,10 @@ public class Cluster {
 
     public void addTuple(Tuple tuple) {
         this.tuples.add(tuple);
-        this.expandRadiusWithTuple(tuple);
     }
 
-    public void expandRadiusWithTuple(Tuple tuple) {
-        double distance = this.distance.calculate(centroid, this.tupleWrapper.getCoordinates(tuple));
+    public void expandRadiusWithTuple(List<Double> coordinates) {
+        double distance = this.distance.calculate(centroid, coordinates);
         if (distance > this.radius) {
             this.radius = distance;
         }
