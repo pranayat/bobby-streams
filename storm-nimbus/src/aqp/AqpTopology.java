@@ -30,17 +30,21 @@ public class AqpTopology {
             for (Stream stream : schemaConfig.getStreams()) {
                 kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
             }
+            builder.setBolt("joiner", new JoinerBolt()
+            .withWindow(Count.of(100)), 2)
+            .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
+
         } else {
             // can have multiple instances as entire data is not needed for clustering
             BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 2);
             for (Stream stream : schemaConfig.getStreams()) {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
+            builder.setBolt("joiner", new JoinerBolt()
+                .withWindow(Count.of(100)), 2)
+                .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         }
 
-        builder.setBolt("joiner", new NoIndexJoinerBolt()
-            .withWindow(Count.of(100)), 2)
-            .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
         builder.setBolt("result", new ResultBolt(), 2).shuffleGrouping("joiner", "resultStream");
         builder.setBolt("noResult", new NoResultBolt(), 2).shuffleGrouping("joiner", "noResultStream");

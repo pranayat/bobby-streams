@@ -25,6 +25,9 @@ public class TupleWrapper {
 
         if (normalize) {
             double magnitude = Math.sqrt(coordinates.stream().mapToDouble(x -> x * x).sum());
+            if (magnitude == 0) {
+                return coordinates;
+            }
             return coordinates.stream().map(x -> x / magnitude).collect(Collectors.toList());
         }
 

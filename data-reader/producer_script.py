@@ -15,7 +15,7 @@ def produce_to_redis(df, r):
             elif index % 3 == 2:
                 stream = "stream_3"                
 
-            r.xadd(stream, {"data": row.to_json()}, maxlen=1000, approximate=True)
+            r.xadd(stream, {"data": row.to_json()}, maxlen=10000, approximate=True)
 
     except Exception as e:
         print(f"Error producing to redis: {str(e)}")
