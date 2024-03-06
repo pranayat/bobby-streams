@@ -84,8 +84,9 @@ public class KMeansClusterMaker {
             }
         }
 
-        assert nearest != null;
-        nearest.addTuple(tuple);
+        if (nearest != null) {
+            nearest.addTuple(tuple);
+        }
     }
 
     public List<Cluster> fit(List<Tuple> tuples) {
