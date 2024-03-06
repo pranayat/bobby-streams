@@ -121,8 +121,8 @@
             "lon",
             "geoaltitude"
           ],
-          "radius": 0.7,
-          "distanceType": "cosine"
+          "radius": 230000,
+          "distanceType": "euclidean"
         },
         {
           "type": "max",
