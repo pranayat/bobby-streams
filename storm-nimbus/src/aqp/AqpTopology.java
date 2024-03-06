@@ -31,7 +31,7 @@ public class AqpTopology {
                 kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
             }
             builder.setBolt("joiner", new NoIndexJoinerBolt()
-            .withWindow(Count.of(100)), 4)
+            .withWindow(Count.of(100)), 2)
             .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
 
         } else {
