@@ -138,16 +138,16 @@ public class JoinerBolt extends BaseWindowedBolt {
 
             for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                 List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
-                List<String> tupleIds = new ArrayList<>();
-                for (Tuple joinResult : joinResults) {
-                    tupleIds.add(joinResult.getStringByField("tupleId"));
-                }
+                // List<String> tupleIds = new ArrayList<>();
+                // for (Tuple joinResult : joinResults) {
+                //     tupleIds.add(joinResult.getStringByField("tupleId"));
+                // }
 
-                Collections.sort(tupleIds);
-                String joinId = String.join("+", tupleIds);
+                // Collections.sort(tupleIds);
+                // String joinId = String.join("+", tupleIds);
 
                 for (Tuple joinResult : joinResults) {
-                    _collector.emit("resultStream", tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+                    _collector.emit("resultStream", tuple, new Values(joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
                 }
 
                 if (joinResults.size() == 0) {
@@ -165,7 +165,7 @@ public class JoinerBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("resultStream", new Fields("joinId", "tupleId", "streamId"));
+        declarer.declareStream("resultStream", new Fields("tupleId", "streamId"));
         declarer.declareStream("noResultStream", new Fields("tupleId", "streamId"));
     }
 }
