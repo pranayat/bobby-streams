@@ -119,10 +119,7 @@
           "on": [
             "lat",
             "lon",
-            "geoaltitude",
-            "baroaltitude",
-            "velocity",
-            "heading"
+            "geoaltitude"
           ],
           "radius": 0.7,
           "distanceType": "cosine"
