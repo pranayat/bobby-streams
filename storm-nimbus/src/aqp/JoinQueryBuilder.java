@@ -18,7 +18,7 @@ public abstract class JoinQueryBuilder {
                         distance = new EuclideanDistance();
                         iDistance = new EuclideanIDistance();
                     }
-                    joinQueries.add(new JoinQuery(stage.getRadius(), stage.getBetween(), stage.getOn(), distance, iDistance));
+                    joinQueries.add(new JoinQuery(query.getId(), stage.getRadius(), stage.getBetween(), stage.getOn(), distance, iDistance));
                 }
             }
         }

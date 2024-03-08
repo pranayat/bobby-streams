@@ -131,6 +131,81 @@
           ]
         }
       ]
+    },
+    {
+      "id": "query_2",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "lon",
+            "geoaltitude"
+          ],
+          "radius": 10000,
+          "distanceType": "euclidean"
+        },
+        {
+          "type": "max",
+          "on": [
+            "velocity"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "query_3",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2"
+          ],
+          "on": [
+            "lat",
+            "lon",
+            "geoaltitude"
+          ],
+          "radius": 15000,
+          "distanceType": "euclidean"
+        },
+        {
+          "type": "max",
+          "on": [
+            "velocity"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "query_4",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2"
+          ],
+          "on": [
+            "lat",
+            "lon"
+          ],
+          "radius": 20000,
+          "distanceType": "euclidean"
+        },
+        {
+          "type": "max",
+          "on": [
+            "velocity"
+          ]
+        }
+      ]
     }
   ]
 }

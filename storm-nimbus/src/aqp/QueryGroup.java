@@ -29,11 +29,11 @@ public class QueryGroup {
         this.c = 1_000_000;
         this.axisNames = axisNames;
         Collections.sort(this.axisNames);
-        this.name = this.axisNames.toString();
+        this.name = this.axisNames.toString() + "-" + distance.getClass().getSimpleName();
         this.streamIds = new HashSet<>();
         this.joinQueries = new ArrayList<>();
         this.clusterMap = new HashMap<>();
-        this.bPlusTree = new BPlusTree(512);
+        this.bPlusTree = new BPlusTree(1024);
         this.distance = distance;
         this.iDistance = iDistance;
     }

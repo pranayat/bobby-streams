@@ -24,14 +24,14 @@ public class AqpTopology {
         if (schemaConfig.getClustering().getType().equals("k-means")) {
             // should have only 1 instance
             BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner",
-                    new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(100),
-                            new BaseWindowedBolt.Count(100)),
+                    new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(1000),
+                            new BaseWindowedBolt.Count(1000)),
                     1);
             for (Stream stream : schemaConfig.getStreams()) {
                 kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
             }
             builder.setBolt("joiner", new JoinerBolt()
-            .withWindow(Count.of(100)), 2)
+            .withWindow(Count.of(1000)), 2)
             .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
 
         } else {
@@ -41,13 +41,18 @@ public class AqpTopology {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
             builder.setBolt("joiner", new JoinerBolt()
-                .withWindow(Count.of(100)), 2)
+                .withWindow(Count.of(1000)), 2)
                 .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         }
 
 
-        builder.setBolt("result", new ResultBolt(), 2).shuffleGrouping("joiner", "resultStream");
-        builder.setBolt("noResult", new NoResultBolt(), 2).shuffleGrouping("joiner", "noResultStream");
+        BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 2);
+        BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 2);
+
+        for (Query query : schemaConfig.getQueries()) {
+            resultBolt.shuffleGrouping("joiner", query.getId() + "_resultStream");
+            noResultBolt.shuffleGrouping("joiner", query.getId() + "_noResultStream");
+        }
 
         Config conf = new Config();
         conf.setDebug(false);
