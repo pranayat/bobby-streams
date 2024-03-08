@@ -26,7 +26,7 @@ public class QueryGroup {
     public QueryGroup(List<String> axisNames, Distance distance, IDistance iDistance) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
-        this.c = 1000000;
+        this.c = 1_000_000;
         this.axisNames = axisNames;
         Collections.sort(this.axisNames);
         this.name = this.axisNames.toString();
@@ -49,9 +49,14 @@ public class QueryGroup {
     public void registerJoinQuery(JoinQuery joinQuery) {
         this.joinQueries.add(joinQuery);
 
-        if (joinQuery.getRadius() > this.maxJoinRadius) {
+        if (joinQuery.getDistance() instanceof EuclideanDistance && joinQuery.getRadius() > this.maxJoinRadius) {
             this.maxJoinRadius = joinQuery.getRadius();
             this.cellLength = (int) (this.maxJoinRadius * 4);
+        }
+
+        // if there were no euclidean queries but only cosine ones then use 10_000 as default
+        if (this.cellLength == 0) {
+            this.cellLength = 10_000;
         }
 
         for (String streamId : joinQuery.getStreamIds()) {
