@@ -54,20 +54,13 @@ public class NoIndexJoinerBolt extends BaseWindowedBolt {
 
             for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                 List<Tuple> joinResults = joinQuery.executeNoIndex(tuple, queryGroup, currentWindow);
-                List<String> tupleIds = new ArrayList<>();
-                for (Tuple joinResult : joinResults) {
-                    tupleIds.add(joinResult.getStringByField("tupleId"));
-                }
-
-                Collections.sort(tupleIds);
-                String joinId = String.join("+", tupleIds);
 
                 for (Tuple joinResult : joinResults) {
-                    _collector.emit("resultStream", tuple, new Values(joinId, joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+                    _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId(), joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
                 }
 
                 if (joinResults.size() == 0) {
-                    _collector.emit("noResultStream", tuple, new Values(tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
+                    _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId(), tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
                 }
             }
 
@@ -82,7 +75,9 @@ public class NoIndexJoinerBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("resultStream", new Fields("joinId", "tupleId", "streamId"));
-        declarer.declareStream("noResultStream", new Fields("tupleId", "streamId"));
+        for (Query query : schemaConfig.getQueries()) {
+            declarer.declareStream(query.getId() + "_resultStream", new Fields("queryId", "tupleId", "streamId"));
+            declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId", "tupleId", "streamId"));
+        }
     }
 }

@@ -6,6 +6,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class JoinQuery {
+    String id;
     double radius;
     List<String> streamIds;
     List<String> fields;
@@ -13,14 +14,19 @@ public class JoinQuery {
     Distance distance;
     IDistance iDistance;
 
-    public JoinQuery(double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
+    public JoinQuery(String id, double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
+        this.id = id;
         this.radius = radius;
         this.streamIds = streamIds;
         this.fields = fields;
         this.results = new ArrayList<>();
         this.distance = distance;
         this.iDistance = iDistance;
+    }
+
+    public String getId() {
+        return this.id;
     }
 
     public double getRadius() {
