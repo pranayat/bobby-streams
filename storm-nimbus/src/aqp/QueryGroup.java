@@ -1,7 +1,7 @@
 package aqp;
 
 import java.util.*;
-
+import org.apache.storm.tuple.Tuple;
 // A query group is identified by its the query axes eg. lat, long
 // Each query group has is responsible for creating clusters be they grid cells or k means clusters using the
 // query groups axes
@@ -17,7 +17,7 @@ public class QueryGroup {
     List<JoinQuery> joinQueries;
     Set<String> streamIds;
     Map<String, Cluster> clusterMap;
-    BPlusTree bPlusTree;
+    BPlusTreeNew<Double, Tuple> bPlusTree;
     String name;
     int c;
     Distance distance;
@@ -33,7 +33,7 @@ public class QueryGroup {
         this.streamIds = new HashSet<>();
         this.joinQueries = new ArrayList<>();
         this.clusterMap = new HashMap<>();
-        this.bPlusTree = new BPlusTree(1024);
+        this.bPlusTree = new BPlusTreeNew<Double, Tuple>(128);
         this.distance = distance;
         this.iDistance = iDistance;
     }
@@ -101,11 +101,11 @@ public class QueryGroup {
         return this.joinQueries;
     }
 
-    public BPlusTree getBPlusTree() {
+    public BPlusTreeNew<Double, Tuple> getBPlusTree() {
         return this.bPlusTree;
     }
 
-    public void setBPlusTree(BPlusTree bPlusTree) {
+    public void setBPlusTree(BPlusTreeNew<Double, Tuple> bPlusTree) {
         this.bPlusTree = bPlusTree;
     }
 

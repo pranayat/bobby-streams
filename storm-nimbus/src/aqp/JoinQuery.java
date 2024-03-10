@@ -66,7 +66,7 @@ public class JoinQuery {
     }
 
     private List<Tuple> findJoinPartnersInStream(Tuple tuple, QueryGroup queryGroup, String streamToJoin) {
-        BPlusTree bPlusTree = queryGroup.getBPlusTree();
+        BPlusTreeNew<Double, Tuple> bPlusTree = queryGroup.getBPlusTree();
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         List<Tuple> joinCandidates = new ArrayList<>();
 
@@ -76,7 +76,7 @@ public class JoinQuery {
                     cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance));
 
             if (!Double.isNaN(searchBounds.get(0)) && !Double.isNaN(searchBounds.get(1))) {
-                joinCandidates.addAll(bPlusTree.search(searchBounds.get(0), searchBounds.get(1)));
+                joinCandidates.addAll(bPlusTree.searchRange(searchBounds.get(0), BPlusTreeNew.RangePolicy.INCLUSIVE, searchBounds.get(1), BPlusTreeNew.RangePolicy.INCLUSIVE));
             }
         }
 

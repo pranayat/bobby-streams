@@ -1,5 +1,7 @@
 package aqp;
 
+import org.apache.storm.tuple.Tuple;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Arrays;
@@ -9,7 +11,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-public class BPlusTreeNew<K extends Comparable<? super K>, V> {
+public class BPlusTreeNew<K extends Comparable<? super K>, V extends Tuple> {
 
  	public static enum RangePolicy {
 		EXCLUSIVE, INCLUSIVE
@@ -225,7 +227,7 @@ public class BPlusTreeNew<K extends Comparable<? super K>, V> {
 		public int findIndex(List<K> keys, K key, List<V> values, String id) {
 			for (int i = 0; i < keys.size(); i++) {
 					// found
-					if (keys.get(i).compareTo(key) == 0 && id.equals(values.get(i))) { // TODO change to tuple id
+					if (keys.get(i).compareTo(key) == 0 && id.equals(values.get(i).getStringByField("tupleId"))) {
 						return i;
 					}
 					if (keys.get(i).compareTo(key) > 0) {
