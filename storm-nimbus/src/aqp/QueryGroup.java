@@ -13,6 +13,7 @@ import org.apache.storm.tuple.Tuple;
 public class QueryGroup {
     int cellLength; // TODO change to double
     double maxJoinRadius;
+    double minJoinRadius;
     List<String> axisNames;
     List<JoinQuery> joinQueries;
     Set<String> streamIds;
@@ -26,6 +27,7 @@ public class QueryGroup {
     public QueryGroup(List<String> axisNames, Distance distance, IDistance iDistance) {
         this.cellLength = 0;
         this.maxJoinRadius = 0;
+        this.minJoinRadius = Double.POSITIVE_INFINITY;
         this.c = 1_000_000;
         this.axisNames = axisNames;
         Collections.sort(this.axisNames);
@@ -49,9 +51,13 @@ public class QueryGroup {
     public void registerJoinQuery(JoinQuery joinQuery) {
         this.joinQueries.add(joinQuery);
 
+        if (joinQuery.getDistance() instanceof EuclideanDistance && joinQuery.getRadius() < this.minJoinRadius) {
+            this.minJoinRadius = joinQuery.getRadius();
+            this.cellLength = (int) (this.minJoinRadius / Math.sqrt(2));
+        }
+
         if (joinQuery.getDistance() instanceof EuclideanDistance && joinQuery.getRadius() > this.maxJoinRadius) {
             this.maxJoinRadius = joinQuery.getRadius();
-            this.cellLength = (int) (this.maxJoinRadius * 4);
         }
 
         // if there were no euclidean queries but only cosine ones then use 10_000 as default

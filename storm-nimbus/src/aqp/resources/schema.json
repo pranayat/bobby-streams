@@ -101,29 +101,28 @@
     }
   ],
   "clustering": {
-    "type": "grid",
-    "k": 3,
-    "iterations": 100
+    "type": "grid"
   },
   "queries": [
     {
-      "id": "query_4",
+      "id": "query_1",
       "stages": [
         {
           "type": "join",
           "between": [
             "stream_1",
-            "stream_2"
+            "stream_2",
+            "stream_3"
           ],
           "on": [
             "lat",
             "lon"
           ],
-          "radius": 15000,
+          "radius": 20,
           "distanceType": "euclidean"
         },
         {
-          "type": "max",
+          "type": "count",
           "on": [
             "velocity"
           ]
