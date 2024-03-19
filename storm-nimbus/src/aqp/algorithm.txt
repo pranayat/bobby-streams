@@ -44,9 +44,11 @@ All this happens within a sliding window
         - join_sum_C1_query1 += partner_tuple_S1.value
   - index(T1) // distance from C1 centroid (and not it's home cell's centroid)
 
-- upon window slide emit these in the same message:
-  - join_count_C1_query1
-  - join_sum_C1_query1
+- upon window slide
+  - emit these in the same message:
+    - join_count_C1_query1
+    - join_sum_C1_query1
+  - remove oldest tuple from index tree
 
 Aggregate bolt
 Accumulates sums and counts and computes averages over cumulative sums and counts per query
