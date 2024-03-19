@@ -112,10 +112,9 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
 
     @Override
     public void execute(Tuple input) {
-        List<Object> values;
         String tupleStreamId = input.getStringByField("streamId");
-        // Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
 
+        List<int[]> replicationCells = new ArrayList<>();
         for (QueryGroup queryGroup : this.queryGroups) {
             // the tuple's stream is not relevant for this set of queries
             if (!queryGroup.isMemberStream(tupleStreamId)) {
@@ -125,12 +124,11 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
             TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
             List<Double> tupleCoordinates = tupleWrapper.getCoordinates(input, queryGroup.getDistance() instanceof CosineDistance);
             int dimensions = queryGroup.getAxisNamesSorted().size();
+            // maxJoinRadius as we want to send it as far as needed for the query with the largest join radius
             int gridRange = (int) Math.ceil(queryGroup.maxJoinRadius / queryGroup.cellLength); // range in terms of number of cells
             int[] tupleCell = getTupleCell(tupleCoordinates, dimensions, queryGroup.cellLength); // eg. [-1, 0 1]
 
-            List<int[]> enclosedCells = new ArrayList<>();
-            List<int[]> intersectingCells = new ArrayList<>();
-
+            
             for (int i = -gridRange + 1; i <= gridRange - 1; i++) {
               for (int j = -gridRange + 1; j <= gridRange - 1; j++) {
                 int[] targetCell = new int[2]; // 2 dim
@@ -141,29 +139,66 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
                   continue;
                 }
 
+                // add this target cell once per query group and not multiple times for each individual query
+                replicationCells.add(targetCell);
+
                 List<List<Double>> corners = getTargetCellCorners(targetCell, queryGroup.cellLength);
-                if (isFarthestCornerInJoinRange(tupleCoordinates, corners, queryGroup.maxJoinRadius)) {
-                  enclosedCells.add(targetCell);
-                } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, queryGroup.maxJoinRadius)) {
-                  intersectingCells.add(targetCell);
+                String enclosedBy = "enclosedBy-"; // eg. enclose-query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
+                String intersectedBy = "intersectedBy-";
+                for (JoinQuery joinQuery : queryGroup.joinQueries) {
+                  if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
+                    enclosedBy += "," + joinQuery.getId();
+                  } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
+                    intersectedBy += "," + joinQuery.getId();
+                  }
                 }
+
+                // just insert tuple's existing fields
+                Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
+                List<Object> values = new ArrayList<Object>();
+                for (Field field : tupleStream.getFields()) {
+                    if (field.getType().equals("double")) {
+                        values.add(input.getDoubleByField(field.getName()));
+                    } else {
+                        values.add(input.getStringByField(field.getName()));
+                    }
+                }
+
+                // isReplica = true
+                values.add(true);
+
+                // add query's this cell is enclosed, intersected by
+                values.add(enclosedBy);
+                values.add(intersectedBy);
+
+                values.add(tupleStreamId); // stream_1
+                
+                // add cell centroid
+                List<Double> centroid = new ArrayList<>();
+                // for cube [2,3] cell length 10 with centroid [2*10 + 10/2, 3*10 + 10/2 ][25, 35]
+                for (int axisOffset : targetCell) {
+                    centroid.add((double) (axisOffset * queryGroup.getCellLength() + queryGroup.getCellLength() / 2));
+                }
+
+                values.add(centroid.toString()); // cluster Id eg. (25, 35)
+                values.add(queryGroup.getName()); // query group Id eg. (lat, long)
+
+                // enclosedBy-query1,query2 intersectedBy-query3 stream_1, (25,35) (lat,long) ...
+                _collector.emit(input, new Values(values.toArray()));
               }
             }
-
-            for (int[] cell : enclosedCells) {
-              System.out.println(cell);
-            }
-
-            for (int[] cell : intersectingCells) {
-              System.out.println(cell);
-            }
           }
+
+          _collector.ack(input);
       }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         Stream stream = this.schemaConfig.getStreams().get(0);
         List<String> fields = new ArrayList<String>(stream.getFieldNames());
+        fields.add("isReplica");
+        fields.add("enclosedBy"); // queries this cell is enclosed by
+        fields.add("intersectedBy"); // queries this cell is intersected by
         fields.add("streamId");
         fields.add("clusterId"); // centroid of cube in this case
         fields.add("queryGroupName");
