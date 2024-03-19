@@ -1,0 +1,37 @@
+GridCellAssigner
+- grid cell length is min_join_radius / sqrt(2)
+- gets one input tuple
+- for each join radius in queryGroup
+  - generate bounding box around the tuple's home cell
+  - remove invalid replication targets according to our coordinates sum / priority logic
+  - among these cells keep only those that are either completely enclosed or intersected by the join circle
+  - replicate the tuple to each of these cells and mark it as 'replica', 'enclosed-query1', 'intersected-query1,query2' // here query2 has smaller radius
+
+Join/Count/Sum
+General idea
+- all non replica tuples within a cell are joinable to each other as the cell diagonal is <= min_join_radius
+- all 'replica' tuples within a cell are not joinable to every other tuple in the cell, they must find join partners on basis of distance
+  - the find join partners within the cell by pruning the search space from the center of the cell using iDistance
+- replica tuples are only joined with non replica tuples in that cell
+
+Joiner bolt stores hashtables to store counts of tuples across all cells+streams in this bolt instance
+Each hashtable stores non replica tuple counts at the level of a cell's stream eg. stream S1 in cell C1
+All this happens within a sliding window
+- gets one input tuple T1 - (S1, C1, Value, replica/non-replica)
+- if non replica tuple
+  - count_min(C1_S1) ++
+  - count_min_sum(C1_S1) += T1.Value
+  - join_count_C1 = count_min(C1_S1)  x count_min(C1_S2) // count without replicas
+  - join_sum_C1 = [ join_count_C1 / count_min(C1_S1) ] x count_min_sum(C1_S1) // sum without replicas
+  - index(T1) // distance from C1 centroid
+- else if replica tuple
+  - for each query - query1, ...
+    - if enclosed by cell for this query eg. 'enclosed-query1'
+      - join_count_C1_query1 += count_min(C1_S2) // can join with all non replica tuples in stream S2 in this cell C1
+      - join_sum_C1_query1 += T1.Value * count_min(C1_S2) // one for each join combination with stream S2
+    - if intersected by cell for this query eg. 'intersected-query1'
+      - find non replica join partners in index using join radius r of current query
+      - if join partners found for EACH joine partner 'partner_tuple_S2'
+        - join_count_C1_query1 += 1
+        - join_sum_C1_query1 += partner_tuple_S2.value
+  - index(T1) // distance from C1 centroid (and not it's home cell's centroid)
