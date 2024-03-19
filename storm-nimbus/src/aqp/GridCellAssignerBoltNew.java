@@ -128,64 +128,79 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
             int gridRange = (int) Math.ceil(queryGroup.maxJoinRadius / queryGroup.cellLength); // range in terms of number of cells
             int[] tupleCell = getTupleCell(tupleCoordinates, dimensions, queryGroup.cellLength); // eg. [-1, 0 1]
 
+            int[] targetCell = new int[dimensions]; // Create an array to store the coordinates of the target cell
+            int[] indices = new int[dimensions]; // Create an array to store the current index for each dimension
+            Arrays.fill(indices, -gridRange + 1); // Initialize all indices to the starting value (-gridRange + 1)
+
+            while (indices[0] <= gridRange - 1) { // Continue looping until the first index reaches the maximum value (gridRange - 1)
+                for (int i = 0; i < dimensions; i++) { // Iterate over each dimension
+                    targetCell[i] = tupleCell[i] + indices[i]; // Calculate the coordinate of the target cell for the current dimension
+                }
             
-            for (int i = -gridRange + 1; i <= gridRange - 1; i++) {
-              for (int j = -gridRange + 1; j <= gridRange - 1; j++) {
-                int[] targetCell = new int[2]; // 2 dim
-                targetCell[0] = tupleCell[0] + i;
-                targetCell[1] = tupleCell[1] + j;
-                
-                if (!isValidTargetCell(targetCell, tupleCell)) {
-                  continue;
+                Boolean isReplica = true;
+                if (Arrays.equals(tupleCell, targetCell)) { // is tuple's home cell
+                  isReplica = false;
                 }
 
-                // add this target cell once per query group and not multiple times for each individual query
-                replicationCells.add(targetCell);
+                // emit only to the home cell of the tuple OR a valid replication target
+                if (!isReplica || isValidTargetCell(targetCell, tupleCell)) {
+                  // add this target cell once per query group and not multiple times for each individual query
+                  replicationCells.add(targetCell);
 
-                List<List<Double>> corners = getTargetCellCorners(targetCell, queryGroup.cellLength);
-                String enclosedBy = "enclosedBy-"; // eg. enclose-query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
-                String intersectedBy = "intersectedBy-";
-                for (JoinQuery joinQuery : queryGroup.joinQueries) {
-                  if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
-                    enclosedBy += "," + joinQuery.getId();
-                  } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
-                    intersectedBy += "," + joinQuery.getId();
+                  List<List<Double>> corners = getTargetCellCorners(targetCell, queryGroup.cellLength);
+                  String enclosedBy = "enclosedBy-"; // eg. enclose-query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
+                  String intersectedBy = "intersectedBy-";
+                  for (JoinQuery joinQuery : queryGroup.joinQueries) {
+                    if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
+                      enclosedBy += "," + joinQuery.getId();
+                    } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
+                      intersectedBy += "," + joinQuery.getId();
+                    }
                   }
+
+                  // just insert tuple's existing fields
+                  Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
+                  List<Object> values = new ArrayList<Object>();
+                  for (Field field : tupleStream.getFields()) {
+                      if (field.getType().equals("double")) {
+                          values.add(input.getDoubleByField(field.getName()));
+                      } else {
+                          values.add(input.getStringByField(field.getName()));
+                      }
+                  }
+
+                  // isReplica = true
+                  values.add(isReplica);
+
+                  // add query's this cell is enclosed, intersected by
+                  values.add(enclosedBy);
+                  values.add(intersectedBy);
+
+                  values.add(tupleStreamId); // stream_1
+
+                  // add cell centroid
+                  List<Double> centroid = new ArrayList<>();
+                  // for cube [2,3] cell length 10 with centroid [2*10 + 10/2, 3*10 + 10/2 ][25, 35]
+                  for (int axisOffset : targetCell) {
+                      centroid.add((double) (axisOffset * queryGroup.getCellLength() + queryGroup.getCellLength() / 2));
+                  }
+
+                  values.add(centroid.toString()); // cluster Id eg. (25, 35)
+                  values.add(queryGroup.getName()); // query group Id eg. (lat, long)
+
+                  // enclosedBy-query1,query2 intersectedBy-query3 stream_1, (25,35) (lat,long) ...
+                  _collector.emit(input, new Values(values.toArray()));
+
                 }
 
-                // just insert tuple's existing fields
-                Stream tupleStream = this.schemaConfig.getStreamById(tupleStreamId);
-                List<Object> values = new ArrayList<Object>();
-                for (Field field : tupleStream.getFields()) {
-                    if (field.getType().equals("double")) {
-                        values.add(input.getDoubleByField(field.getName()));
-                    } else {
-                        values.add(input.getStringByField(field.getName()));
+                // Update indices for next iteration
+                indices[dimensions - 1]++; // Increment the last index
+                for (int i = dimensions - 1; i > 0; i--) { // Iterate backwards over the dimensions
+                    if (indices[i] > gridRange - 1) { // Check if the current index exceeds the maximum value
+                        indices[i] = -gridRange + 1; // Reset the current index to the starting value
+                        indices[i - 1]++; // Increment the index of the previous dimension
                     }
                 }
-
-                // isReplica = true
-                values.add(true);
-
-                // add query's this cell is enclosed, intersected by
-                values.add(enclosedBy);
-                values.add(intersectedBy);
-
-                values.add(tupleStreamId); // stream_1
-                
-                // add cell centroid
-                List<Double> centroid = new ArrayList<>();
-                // for cube [2,3] cell length 10 with centroid [2*10 + 10/2, 3*10 + 10/2 ][25, 35]
-                for (int axisOffset : targetCell) {
-                    centroid.add((double) (axisOffset * queryGroup.getCellLength() + queryGroup.getCellLength() / 2));
-                }
-
-                values.add(centroid.toString()); // cluster Id eg. (25, 35)
-                values.add(queryGroup.getName()); // query group Id eg. (lat, long)
-
-                // enclosedBy-query1,query2 intersectedBy-query3 stream_1, (25,35) (lat,long) ...
-                _collector.emit(input, new Values(values.toArray()));
-              }
             }
           }
 
