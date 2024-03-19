@@ -12,7 +12,7 @@ General idea
 - all non replica tuples within a cell are joinable to each other as the cell diagonal is <= min_join_radius
 - all 'replica' tuples within a cell are not joinable to every other tuple in the cell, they must find join partners on basis of distance
   - they find join partners within the cell by pruning the cell search space using iDistance
-- replica tuples are only joined with non replica tuples in that cell
+- replica tuples are only joined with non replica tuples in that cell, so replicas look for non-replicas in index and vice versa
 
 Joiner bolt stores hashtables to store counts of tuples across all cells+streams in this bolt instance
 Each hashtable stores non replica tuple counts at the level of a cell's stream eg. stream S1 in cell C1
@@ -22,16 +22,23 @@ All this happens within a sliding window
 - if non replica tuple
   - count_min(C1_S1) ++
   - count_min_sum(C1_S1) += T1.Value
-  - join_count_C1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3) // this is the count without replicas
-  - join_sum_C1 = [ join_count_C1 / count_min(C1_S1) ] x count_min_sum(C1_S1) // this is the sum without replicas
-  - index(T1) // distance from C1 centroid
+  - for each query - query1, ... (counts and sums same for all in this case as cell diagonal = min_join_radius)
+    - join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3) // this is the count without replicas
+    - join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1) // this is the sum without replicas
+
+    - find 'replica' join partners in index using join radius r of current query
+      - if join partners found in S2, S3 then for EACH joine partner eg. 'partner_tuple_S2'
+        - join_count_C1_query1 += 1
+        - join_sum_C1_query1 += partner_tuple_S1.value
+
+    - index(T1) // distance from C1 centroid
 - else if replica tuple
   - for each query - query1, ...
     - if enclosed by cell C1 for this query eg. 'enclosed-query1'
       - join_count_C1_query1 += count_min(C1_S2) * count_min(C1_S3) // can join with all non replica tuple combinations S2xS3
       - join_sum_C1_query1 += T1.Value * count_min(C1_S2) * count_min(C1_S3) // one for each non replica tuple combinations S2xS3
     - if intersected by cell for this query eg. 'intersected-query1'
-      - find non replica join partners in index using join radius r of current query
+      - find 'non replica' join partners in index using join radius r of current query
       - if join partners found in S2, S3 then for EACH joine partner eg. 'partner_tuple_S2'
         - join_count_C1_query1 += 1
         - join_sum_C1_query1 += partner_tuple_S1.value
