@@ -116,7 +116,8 @@
           ],
           "on": [
             "lat",
-            "lon"
+            "lon",
+            "geoaltitude"
           ],
           "radius": 20,
           "distanceType": "euclidean"
@@ -128,6 +129,32 @@
           ]
         }
       ]
-    }
+    },
+    {
+      "id": "query_2",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "lon",
+            "geoaltitude"
+          ],
+          "radius": 30,
+          "distanceType": "euclidean"
+        },
+        {
+          "type": "count",
+          "on": [
+            "velocity"
+          ]
+        }
+      ]
+    }    
   ]
 }
