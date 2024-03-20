@@ -21,7 +21,7 @@ All this happens within a sliding window
 - gets one input tuple T1 - (S1, C1, Value, replica/non-replica)
 - if non replica tuple
   - count_min(C1_S1) ++
-  - count_min_sum(C1_S1) += T1.Value
+  - count_min_sum(C1_S1) += T1.Value // also depends on query because 'Value' field is specified in query // TODO should we maintain separate digest for each query as sum column ranges could be very different?
   - for each query - query1, ... (counts and sums same for all in this case as cell diagonal = min_join_radius)
     - join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3) // this is the count without replicas
     - join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1) // this is the sum without replicas
@@ -49,6 +49,8 @@ All this happens within a sliding window
     - join_count_C1_query1
     - join_sum_C1_query1
   - remove oldest tuple from index tree
+  - count_min(C1_S1) --
+  - count_min_sum(C1_S1) -= T1.Value
 
 Aggregate bolt
 Accumulates sums and counts and computes averages over cumulative sums and counts per query

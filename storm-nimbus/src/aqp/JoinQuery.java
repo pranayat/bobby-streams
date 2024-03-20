@@ -13,6 +13,9 @@ public class JoinQuery {
     List<List<Tuple>> results;
     Distance distance;
     IDistance iDistance;
+    Panakos panakosSumSketch;
+    String sumStream;
+    String sumField;
 
     public JoinQuery(String id, double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
@@ -23,6 +26,27 @@ public class JoinQuery {
         this.results = new ArrayList<>();
         this.distance = distance;
         this.iDistance = iDistance;
+        this.panakosSumSketch = new Panakos();
+    }
+
+    public Panakos getPanakosSumSketch() {
+        return this.panakosSumSketch;
+    }
+    
+    public void setSumStream(String sumStream) {
+        this.sumStream = sumStream;
+    }
+
+    public void setSumField(String sumField) {
+        this.sumField = sumField;
+    }
+
+    public String getSumStream() {
+        return this.sumStream;
+    }
+
+    public String getSumField() {
+        return this.sumField;
     }
 
     public String getId() {

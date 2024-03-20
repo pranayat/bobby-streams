@@ -123,9 +123,9 @@
           "distanceType": "euclidean"
         },
         {
-          "type": "count",
+          "type": "sum",
           "on": [
-            "velocity"
+            "stream_1.velocity"
           ]
         }
       ]
@@ -149,9 +149,9 @@
           "distanceType": "euclidean"
         },
         {
-          "type": "count",
+          "type": "sum",
           "on": [
-            "velocity"
+            "stream_2.velocity"
           ]
         }
       ]
