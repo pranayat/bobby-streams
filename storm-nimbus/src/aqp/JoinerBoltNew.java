@@ -133,7 +133,8 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     int queryJoinCountForCluster = 0;
                     double queryJoinSumForCluster = 0;
 
-                    if (!isReplica || (isReplica && tuple.getStringByField("enclosedBy").contains(joinQuery.getId()))) {
+                    if (!isReplica) {
+                        // count_min(C1_S1) ++
                         // count_min(C1_S1) ++
                         joinQuery.getPanakosCountSketch().add(tupleClusterId + "_" + tupleStreamId);
 
@@ -145,7 +146,10 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3), query1 = JOIN(S1 x S2 x S3)
                         queryJoinCountForCluster = 1;
                         for (String streamId : joinQuery.getStreamIds()) {
-                            queryJoinCountForCluster *= joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + streamId);
+                            // join this tuple with it's own stream
+                            if (streamId.equals(tupleStreamId)) {
+                                queryJoinCountForCluster *= joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + streamId);
+                            }
                         }
 
                         // no point computing sum if no join tuples
@@ -157,7 +161,8 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         }
                     }
                     
-                    else if (isReplica && tuple.getStringByField("intersectedBy").contains(joinQuery.getId())) {
+                    // isReplica = true
+                    else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
                         List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
                         Boolean atleastOneNonReplica = false;
@@ -172,13 +177,14 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         queryJoinSumForCluster = 0;
                         if (atleastOneNonReplica) {
                             for (Tuple joinPartner : joinResults) {
-                                queryJoinCountForCluster += 1;
+                                // T1_S1 - [T2_S2, T3_S3, T4_S3]
+                                // == [T1_S1 - T2_S2 - T3_S3] [T1_S1 - T2_S2 - T4_S3]
                                 if (joinPartner.getStringByField(querySumField).equals(querySumStreamId)) {
+                                    queryJoinCountForCluster += 1; // increment for this join combination of tuples
                                     queryJoinSumForCluster += joinPartner.getDoubleByField(querySumField);
                                 }
                             }
                         }
-
                     }
 
                     List<Object> values = new ArrayList<Object>();
@@ -194,6 +200,27 @@ public class JoinerBoltNew extends BaseWindowedBolt {
             }
         
             deleteExpiredTuplesFromTree(inputWindow.getExpired());
+            
+            // deduct counts and sums from sketches for expired tuples
+            for (Tuple expiredTuple : inputWindow.getExpired()) {
+                QueryGroup queryGroup = getQueryGroupByName(expiredTuple.getStringByField("queryGroupName"));
+                Boolean isReplica = expiredTuple.getBooleanByField("isReplica");
+                String tupleClusterId = expiredTuple.getStringByField("clusterId");
+                String tupleStreamId = expiredTuple.getStringByField("streamId");
+                
+                for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+                    String querySumStreamId = joinQuery.getSumStream();
+                    String querySumField = joinQuery.getSumField();
+
+                    if (!isReplica) {
+                        joinQuery.getPanakosCountSketch().add(tupleClusterId + "_" + tupleStreamId, -1);
+                    }
+
+                    if (!isReplica && tupleStreamId.equals(querySumStreamId)) {
+                        joinQuery.getPanakosSumSketch().add(tupleClusterId + "_" + tupleStreamId, -expiredTuple.getDoubleByField(querySumField));
+                    }
+                }
+            }
         } catch (Exception e) {
     
         }
