@@ -42,7 +42,7 @@ public class AqpTopology {
             }
             builder.setBolt("joiner", new JoinerBoltNew()
                 .withWindow(Count.of(1000)), 2)
-                .partialKeyGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
+                .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
         }
 
 
@@ -53,6 +53,9 @@ public class AqpTopology {
             resultBolt.shuffleGrouping("joiner", query.getId() + "_resultStream");
             noResultBolt.shuffleGrouping("joiner", query.getId() + "_noResultStream");
         }
+
+        BoltDeclarer aggregationBolt = builder.setBolt("aggregation", new AggregationBolt(), 2);
+        aggregationBolt.fieldsGrouping("joiner", "aggregateStream", new Fields("queryId", "clusterId"));
 
         Config conf = new Config();
         conf.setDebug(false);
