@@ -23,6 +23,7 @@ public class QueryGroup {
     int c;
     Distance distance;
     IDistance iDistance;
+    Panakos panakosCountSketch;
 
     public QueryGroup(List<String> axisNames, Distance distance, IDistance iDistance) {
         this.cellLength = 0;
@@ -38,6 +39,11 @@ public class QueryGroup {
         this.bPlusTree = new BPlusTreeNew<Double, Tuple>(128);
         this.distance = distance;
         this.iDistance = iDistance;
+        this.panakosCountSketch = new Panakos();
+    }
+
+    public Panakos getPanakosCountSketch() {
+        return this.panakosCountSketch;
     }
 
     public int getCellLength() {

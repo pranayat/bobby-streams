@@ -54,7 +54,7 @@ public class CountMinSketch {
     }
 
     // for count_min_sum value = value of tuple
-    public void add(Object x, int value) throws NoSuchAlgorithmException {
+    public void add(Object x, double value) throws NoSuchAlgorithmException {
         n += value;
         int[] hashes = hash(x);
         for (int i = 0; i < d; i++) {

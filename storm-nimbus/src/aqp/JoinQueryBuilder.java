@@ -7,6 +7,7 @@ public abstract class JoinQueryBuilder {
     public static List<JoinQuery> build(SchemaConfig schemaConfig) {
         List<JoinQuery> joinQueries = new ArrayList<>();
         for (Query query : schemaConfig.getQueries()) {
+            JoinQuery joinQuery = null;
             for (Stage stage : query.getStages()) {
                 if (stage.getType().equals("join")) {
                     Distance distance;
@@ -18,7 +19,13 @@ public abstract class JoinQueryBuilder {
                         distance = new EuclideanDistance();
                         iDistance = new EuclideanIDistance();
                     }
-                    joinQueries.add(new JoinQuery(query.getId(), stage.getRadius(), stage.getBetween(), stage.getOn(), distance, iDistance));
+
+                    // join stage always comes befor sum stage so joinQuery will have been created here when we go to the else if
+                    joinQuery = new JoinQuery(query.getId(), stage.getRadius(), stage.getBetween(), stage.getOn(), distance, iDistance);
+                    joinQueries.add(joinQuery);
+                } else if (stage.getType().equals("sum")) {
+                    joinQuery.setSumStream(stage.getOn().get(0).split("\\.")[0]);
+                    joinQuery.setSumField(stage.getOn().get(0).split("\\.")[1]);
                 }
             }
         }
