@@ -148,8 +148,8 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
                   replicationCells.add(targetCell);
 
                   List<List<Double>> corners = getTargetCellCorners(targetCell, queryGroup.cellLength);
-                  String enclosedBy = "enclosedBy-"; // eg. enclose-query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
-                  String intersectedBy = "intersectedBy-";
+                  String enclosedBy = "enclosedBy:"; // eg. enclose-query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
+                  String intersectedBy = "intersectedBy:";
                   for (JoinQuery joinQuery : queryGroup.joinQueries) {
                     if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
                       enclosedBy += "," + joinQuery.getId();
@@ -188,7 +188,7 @@ public class GridCellAssignerBoltNew extends BaseRichBolt {
                   values.add(centroid.toString()); // cluster Id eg. (25, 35)
                   values.add(queryGroup.getName()); // query group Id eg. (lat, long)
 
-                  // enclosedBy-query1,query2 intersectedBy-query3 stream_1, (25,35) (lat,long) ...
+                  // enclosedBy:query1,query2 intersectedBy:query3 stream_1, (25,35) (lat,long) ...
                   _collector.emit(input, new Values(values.toArray()));
 
                 }

@@ -35,8 +35,8 @@ All this happens within a sliding window
 - else if replica tuple
   - for each query - query1, ...
     - if enclosed by cell C1 for this query eg. 'enclosed-query1'
-      - join_count_C1_query1 += count_min(C1_S2) * count_min(C1_S3) // can join with all non replica tuple combinations S2xS3
-      - join_sum_C1_query1 += T1.Value * count_min(C1_S2) * count_min(C1_S3) // one for each non replica tuple combinations S2xS3
+      - join_count_C1_query1 = count_min(C1_S2) * count_min(C1_S3) // can join with all non replica tuple combinations S2xS3
+      - join_sum_C1_query1 = T1.Value * count_min(C1_S2) * count_min(C1_S3) // one for each non replica tuple combinations S2xS3
     - if intersected by cell for this query eg. 'intersected-query1'
       - find 'non replica' join partners in index using join radius r of current query
       - if join partners found in S2, S3 then for EACH joine partner eg. 'partner_tuple_S2'

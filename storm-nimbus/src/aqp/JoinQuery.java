@@ -16,6 +16,7 @@ public class JoinQuery {
     Panakos panakosSumSketch;
     String sumStream;
     String sumField;
+    Panakos panakosCountSketch;
 
     public JoinQuery(String id, double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
@@ -26,7 +27,12 @@ public class JoinQuery {
         this.results = new ArrayList<>();
         this.distance = distance;
         this.iDistance = iDistance;
+        this.panakosCountSketch = new Panakos();
         this.panakosSumSketch = new Panakos();
+    }
+
+    public Panakos getPanakosCountSketch() {
+        return this.panakosCountSketch;
     }
 
     public Panakos getPanakosSumSketch() {
@@ -94,14 +100,14 @@ public class JoinQuery {
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         List<Tuple> joinCandidates = new ArrayList<>();
 
-        for (Cluster cluster : queryGroup.getClusterMap().values()) {
-            IDistance iDistance = queryGroup.getIDistance();
-            List<Double> searchBounds = iDistance.getSearchBounds(cluster.getRadius(), cluster.getCentroid(),
-                    cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance));
+        // only need to search for join partners within a cluster as everything joinable is already inside it
+        Cluster cluster = queryGroup.getCluster(tuple.getStringByField("clusterId"));
+        IDistance iDistance = queryGroup.getIDistance();
+        List<Double> searchBounds = iDistance.getSearchBounds(cluster.getRadius(), cluster.getCentroid(),
+                cluster.getI(), queryGroup.getC(), this.getRadius(), tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance));
 
-            if (!Double.isNaN(searchBounds.get(0)) && !Double.isNaN(searchBounds.get(1))) {
-                joinCandidates.addAll(bPlusTree.searchRange(searchBounds.get(0), BPlusTreeNew.RangePolicy.INCLUSIVE, searchBounds.get(1), BPlusTreeNew.RangePolicy.INCLUSIVE));
-            }
+        if (!Double.isNaN(searchBounds.get(0)) && !Double.isNaN(searchBounds.get(1))) {
+            joinCandidates.addAll(bPlusTree.searchRange(searchBounds.get(0), BPlusTreeNew.RangePolicy.INCLUSIVE, searchBounds.get(1), BPlusTreeNew.RangePolicy.INCLUSIVE));
         }
 
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
