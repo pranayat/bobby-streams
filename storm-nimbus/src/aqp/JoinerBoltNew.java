@@ -146,7 +146,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3), query1 = JOIN(S1 x S2 x S3)
                         queryJoinCountForCluster = 1;
                         for (String streamId : joinQuery.getStreamIds()) {
-                            // join this tuple with it's own stream
+                            // don't join this tuple with it's own stream
                             if (streamId.equals(tupleStreamId)) {
                                 queryJoinCountForCluster *= joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + streamId);
                             }
