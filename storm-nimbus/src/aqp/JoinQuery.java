@@ -17,6 +17,8 @@ public class JoinQuery {
     String sumStream;
     String sumField;
     Panakos panakosCountSketch;
+    Map<String, Integer> clusterJoinCountMap;
+    Map<String, Double> clusterJoinSumMap;
 
     public JoinQuery(String id, double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
@@ -29,7 +31,25 @@ public class JoinQuery {
         this.iDistance = iDistance;
         this.panakosCountSketch = new Panakos();
         this.panakosSumSketch = new Panakos();
+        this.clusterJoinCountMap = new HashMap<>();
+        this.clusterJoinSumMap = new HashMap<>();
     }
+
+    public Integer aggregateJoinCounts() {
+        return this.clusterJoinCountMap.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+    public Double aggregateJoinSums() {
+        return this.clusterJoinSumMap.values().stream().mapToDouble(Double::doubleValue).sum();
+    }
+
+    public Map<String, Integer> getClusterJoinCountMap() {
+        return this.clusterJoinCountMap;
+    }
+
+    public Map<String, Double> getClusterJoinSumMap() {
+        return this.clusterJoinSumMap;
+    }    
 
     public Panakos getPanakosCountSketch() {
         return this.panakosCountSketch;

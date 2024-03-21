@@ -202,6 +202,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     if (queryJoinCountForCluster > 0) {
                         List<Object> values = new ArrayList<Object>();
                         values.add(joinQuery.getId());
+                        values.add(queryGroup.getName());
                         values.add(tupleClusterId);
                         values.add(queryJoinCountForCluster);
                         values.add(queryJoinSumForCluster);
@@ -247,6 +248,6 @@ public class JoinerBoltNew extends BaseWindowedBolt {
             declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId", "tupleId", "streamId"));
         }
 
-        declarer.declareStream("aggregateStream", new Fields("queryId", "clusterId", "queryJoinCountForCluster", "queryJoinSumForCluster"));
+        declarer.declareStream("aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "queryJoinCountForCluster", "queryJoinSumForCluster"));
     }
 }
