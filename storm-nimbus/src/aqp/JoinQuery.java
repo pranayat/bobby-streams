@@ -241,35 +241,40 @@ public class JoinQuery {
         int j = 0;
         while (!joinCombinations.isEmpty()) { // for [a1, b1] in [ [a1, b1], [a1, b2] ]
 
-          int levelSize = joinCombinations.size();
-          for (int i = 0; i < levelSize; i++) {
+            if (j == streamsToJoin.size()) {
+                break;
+            }
 
+            int levelSize = joinCombinations.size();
             String streamToJoin = streamsToJoin.get(j);
-            List<Tuple> joinCombination = joinCombinations.poll(); // [a1, b1]
-            List<List<Tuple>> combinationJoinPartners = new ArrayList<>();
 
-            for (Tuple element: joinCombination) { // for a1 in [a1, b1]
-              List<Tuple> elementJoinPartners = this.findJoinPartnersInStream(element, queryGroup, streamToJoin); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
-              combinationJoinPartners.add(elementJoinPartners); // [a1, b1] - [ [c1, c2, c3], [c1, c2] ]
-            }
-            
-            List<Tuple> combinationCommonJoinPartners = findCommonElements(combinationJoinPartners); // for [a1, b1] common are [c1, c2]
-            
-            // create a new join extended combination for each of the common join partners c1 and c2 with the combination [a1, b1] => [a1, b1, c1], [a1, b1, c2]
-            for (Tuple combinationCommonJoinPartner : combinationCommonJoinPartners) { // for c1 in [c1, c2]
-              List<Tuple> extendedJoinCombination = new ArrayList<>();
-              extendedJoinCombination.addAll(joinCombination);
-              extendedJoinCombination.add(combinationCommonJoinPartner); // [a1, b1] got extended to [a1, b1, c1]
-              joinCombinations.offer(extendedJoinCombination); // [ [a1] [a1, b1], [a1, b2], [a1, b1, c1] ]
-            }
+            for (int i = 0; i < levelSize; i++) {
 
-            // we just joined the last stream so add the join combinations
-            if (j == streamsToJoin.size() - 1) {
-              resultCombinations.addAll(joinCombinations);
+                List<Tuple> joinCombination = joinCombinations.poll(); // [a1, b1]
+                List<List<Tuple>> combinationJoinPartners = new ArrayList<>();
+
+                for (Tuple element: joinCombination) { // for a1 in [a1, b1]
+                    List<Tuple> elementJoinPartners = this.findJoinPartnersInStream(element, queryGroup, streamToJoin); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
+                    combinationJoinPartners.add(elementJoinPartners); // [a1, b1] - [ [c1, c2, c3], [c1, c2] ]
+                }
+
+                List<Tuple> combinationCommonJoinPartners = findCommonElements(combinationJoinPartners); // for [a1, b1] common are [c1, c2]
+
+                // create a new join extended combination for each of the common join partners c1 and c2 with the combination [a1, b1] => [a1, b1, c1], [a1, b1, c2]
+                for (Tuple combinationCommonJoinPartner : combinationCommonJoinPartners) { // for c1 in [c1, c2]
+                    List<Tuple> extendedJoinCombination = new ArrayList<>();
+                    extendedJoinCombination.addAll(joinCombination);
+                    extendedJoinCombination.add(combinationCommonJoinPartner); // [a1, b1] got extended to [a1, b1, c1]
+                    joinCombinations.offer(extendedJoinCombination); // [ [a1] [a1, b1], [a1, b2], [a1, b1, c1] ]
+                }
+
+                // we just joined the last stream so add the join combinations
+                if (j == streamsToJoin.size() - 1) {
+                    resultCombinations.addAll(joinCombinations);
+                }
             }
 
             j++; // done with this level, join next stream at next level
-          }
         }
 
         return resultCombinations;

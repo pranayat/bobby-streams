@@ -153,7 +153,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         }
 
                         // no point computing sum if no join tuples
-                        if (queryJoinCountForCluster != 0) {
+                        if (queryJoinCountForCluster != 0 && joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + querySumStreamId) != 0) {
                             // query1 = SUM(S1.value)
                             // join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1)
                             queryJoinSumForCluster = (queryJoinCountForCluster / joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + querySumStreamId))
@@ -233,7 +233,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                 }
             }
         } catch (Exception e) {
-    
+            System.out.println(e);
         }
     }
 
