@@ -142,33 +142,33 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
         }
 
-        // getNew() will return the one new tuple that slides in
-        for (Tuple tuple : inputWindow.getNew()) {
-            QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+        // // getNew() will return the one new tuple that slides in
+        // for (Tuple tuple : inputWindow.getNew()) {
+        //     QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
-            // needed only if replicating to  adjacent cells
-            // if (isTupleInQueryGroupTree(tuple, queryGroup)) {
-            //     continue;
-            // }
+        //     // needed only if replicating to  adjacent cells
+        //     // if (isTupleInQueryGroupTree(tuple, queryGroup)) {
+        //     //     continue;
+        //     // }
 
-            for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-                List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
+        //     for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+        //         List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
 
-                for (Tuple joinResult : joinResults) {
-                    _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId(), joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
-                }
+        //         for (Tuple joinResult : joinResults) {
+        //             _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId(), joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+        //         }
 
-                if (joinResults.size() == 0) {
-                    _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId(), tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
-                }
-            }
+        //         if (joinResults.size() == 0) {
+        //             _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId(), tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
+        //         }
+        //     }
             
             // index the tuple
-            insertIntoQueryGroupTree(tuple, queryGroup);
-        }
+            // insertIntoQueryGroupTree(tuple, queryGroup);
+        // }
 
         // TODO shrink cluster radius, and what if we don't do it ?
-        deleteExpiredTuplesFromTree(inputWindow.getExpired());
+        // deleteExpiredTuplesFromTree(inputWindow.getExpired());
     }
 
     @Override
