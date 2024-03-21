@@ -164,23 +164,34 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     // isReplica = true
                     else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
-                        List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup);
-                        Boolean atleastOneNonReplica = false;
-                        for (Tuple joinPartner : joinResults) {
-                            if (!joinPartner.getBooleanByField("isReplica")) {
-                                atleastOneNonReplica = true;
-                                break;
+                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup);
+                        List<List<Tuple>> validJoinCombinations = new ArrayList<>();
+
+                        for (List<Tuple> joinCombination : joinCombinations) {
+
+                            Boolean atleastOneNonReplica = false;
+                            for (Tuple joinPartner : joinCombination) {
+
+                                if (!joinPartner.getBooleanByField("isReplica")) {
+                                    atleastOneNonReplica = true;
+                                    break;
+                                }
+                            }
+
+                            if (atleastOneNonReplica) {
+                                validJoinCombinations.add(joinCombination);
                             }
                         }
 
                         queryJoinCountForCluster = 0;
                         queryJoinSumForCluster = 0;
-                        if (atleastOneNonReplica) {
-                            for (Tuple joinPartner : joinResults) {
-                                // T1_S1 - [T2_S2, T3_S3, T4_S3]
-                                // == [T1_S1 - T2_S2 - T3_S3] [T1_S1 - T2_S2 - T4_S3]
-                                if (joinPartner.getStringByField(querySumField).equals(querySumStreamId)) {
-                                    queryJoinCountForCluster += 1; // increment for this join combination of tuples
+                        for (List<Tuple> validJoinCombination : validJoinCombinations) {
+                            queryJoinCountForCluster += 1; // increment for this join combination of tuples
+
+                            for (Tuple joinPartner : validJoinCombination) {
+
+                                // will be true once per join combination
+                                if (joinPartner.getStringByField("streamId").equals(querySumStreamId)) {
                                     queryJoinSumForCluster += joinPartner.getDoubleByField(querySumField);
                                 }
                             }
