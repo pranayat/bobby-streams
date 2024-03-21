@@ -53,8 +53,7 @@ public class AqpTopology {
             resultBolt.shuffleGrouping("joiner", query.getId() + "_resultStream");
             noResultBolt.shuffleGrouping("joiner", query.getId() + "_noResultStream");
         }
-
-        BoltDeclarer aggregationBolt = builder.setBolt("aggregation", new AggregationBolt(), 2);
+        BoltDeclarer aggregationBolt = builder.setBolt("aggregation", new AggregationBolt().withWindow(Count.of(1000)), 1);
         aggregationBolt.fieldsGrouping("joiner", "aggregateStream", new Fields("queryId", "clusterId"));
 
         Config conf = new Config();

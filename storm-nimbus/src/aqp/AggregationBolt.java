@@ -1,19 +1,103 @@
 package aqp;
 
-import org.apache.storm.topology.BasicOutputCollector;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
-import org.apache.storm.topology.base.BaseBasicBolt;
+import org.apache.storm.topology.base.BaseWindowedBolt;
+import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
+import org.apache.storm.tuple.Values;
+import org.apache.storm.windowing.TupleWindow;
 
-public class AggregationBolt extends BaseBasicBolt {
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.Optional;
 
-  @Override
-  public void execute(Tuple tuple, BasicOutputCollector collector) {
-      // this bolt is only for acking join result tuples from JoinerBolt
-      System.out.println(tuple);
-  }
+public class AggregationBolt extends BaseWindowedBolt {
+    OutputCollector _collector;
+    private SchemaConfig schemaConfig;
+    List<JoinQuery> joinQueries;
+    List<QueryGroup> queryGroups;
 
-  @Override
-  public void declareOutputFields(OutputFieldsDeclarer ofd) {
-  }
+    public AggregationBolt() {
+        this.schemaConfig = SchemaConfigBuilder.build();
+    }
+
+    @Override
+    public void prepare(
+            Map map,
+            TopologyContext topologyContext,
+            OutputCollector collector) {
+        _collector = collector;
+
+        this.joinQueries = JoinQueryBuilder.build(this.schemaConfig);
+    }
+
+    private JoinQuery getJoinQueryById(String queryId) {
+      // TODO make this a hashmap
+      return this.joinQueries.stream()
+              .filter(g -> g.getId().equals(queryId))
+              .findFirst()
+              .get();
+    }
+
+    @Override
+    public void execute(TupleWindow inputWindow) {
+
+        try {
+            for (Tuple tuple : inputWindow.getNew()) {
+                String clusterId = tuple.getStringByField("clusterId");
+                Integer queryJoinCountForCluster = tuple.getIntegerByField("queryJoinCountForCluster");
+                Double queryJoinSumForCluster = tuple.getDoubleByField("queryJoinSumForCluster");
+                String joinQueryId = tuple.getStringByField("queryId");
+                JoinQuery joinQuery = getJoinQueryById(joinQueryId);
+
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) + queryJoinCountForCluster);
+                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) + queryJoinSumForCluster);
+              }
+
+              for (Tuple expiredTuple : inputWindow.getExpired()) {
+
+                // emit aggregates everytime the window slides
+                for (JoinQuery joinQuery : joinQueries) {
+                  // aggregate counts and sums across clusters
+                  Integer joinCount = joinQuery.aggregateJoinCounts();
+                  Double joinSum = joinQuery.aggregateJoinSums();
+                  Double joinAvg = 0.0;
+
+                  if (joinCount != 0) {
+                    joinAvg = joinSum / joinCount;
+                  }
+
+                  List<Object> values = new ArrayList<Object>();
+                  values.add(joinQuery.getId());
+                  values.add(joinCount);
+                  values.add(joinSum);
+                  values.add(joinAvg);
+
+                  _collector.emit("aggregateStream", expiredTuple, values);
+                }
+
+                // deduct expired counts and sums
+                String clusterId = expiredTuple.getStringByField("clusterId");
+                Integer queryJoinCountForCluster = expiredTuple.getIntegerByField("queryJoinCountForCluster");
+                Double queryJoinSumForCluster = expiredTuple.getDoubleByField("queryJoinSumForCluster");
+                String joinQueryId = expiredTuple.getStringByField("queryId");
+                JoinQuery joinQuery = getJoinQueryById(joinQueryId);
+
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) - queryJoinCountForCluster);
+                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) - queryJoinSumForCluster);
+              }
+        } catch (Exception e) {
+              e.printStackTrace(System.out);
+        }
+    }
+
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer declarer) {
+        declarer.declareStream("aggregateStream", new Fields("queryId", "queryJoinCount", "queryJoinSum", "queryJoinAvg"));
+    }
 }
