@@ -198,13 +198,16 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                         }
                     }
 
-                    List<Object> values = new ArrayList<Object>();
-                    values.add(joinQuery.getId());
-                    values.add(tupleClusterId);
-                    values.add(queryJoinCountForCluster);
-                    values.add(queryJoinSumForCluster);
-
-                    _collector.emit("aggregateStream", tuple, values);
+                    // no point emitting if no join partners found
+                    if (queryJoinCountForCluster > 0) {
+                        List<Object> values = new ArrayList<Object>();
+                        values.add(joinQuery.getId());
+                        values.add(tupleClusterId);
+                        values.add(queryJoinCountForCluster);
+                        values.add(queryJoinSumForCluster);
+    
+                        _collector.emit("aggregateStream", tuple, values);
+                    }
                 }
             
                 insertIntoQueryGroupTree(tuple, queryGroup);
