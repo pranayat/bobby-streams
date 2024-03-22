@@ -46,7 +46,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
     private void insertIntoQueryGroupTree(Tuple tuple, QueryGroup queryGroup) {
         Distance distance = queryGroup.getDistance();
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
-        BPlusTreeNew bPlusTree = queryGroup.getBPlusTree();
+        BPlusTree bPlusTree = queryGroup.getBPlusTree();
 
         Cluster cluster = queryGroup.getCluster(tuple.getStringByField("clusterId"));
         double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
@@ -81,7 +81,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
             Distance distance = queryGroup.getDistance();
             TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
             Cluster cluster = queryGroup.getCluster(expiredTuple.getStringByField("clusterId"));
-            BPlusTreeNew bPlusTree = queryGroup.getBPlusTree();
+            BPlusTree bPlusTree = queryGroup.getBPlusTree();
             double queryTupleToCentroidDistance = distance.calculate(cluster.getCentroid(),
                     tupleWrapper.getCoordinates(expiredTuple, queryGroup.getDistance() instanceof CosineDistance));
 
@@ -187,7 +187,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
                         values.add(tupleApproxJoinCount);
                         values.add(tupleApproxJoinSum);
     
-                        _collector.emit("aggregateStream", tuple, values);
+                        _collector.emit(joinQuery.getId() + "_aggregateStream", tuple, values);
                     }
                 }
             

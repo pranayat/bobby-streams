@@ -18,7 +18,7 @@ public class QueryGroup {
     List<JoinQuery> joinQueries;
     Set<String> streamIds;
     Map<String, Cluster> clusterMap;
-    BPlusTreeNew<Double, Tuple> bPlusTree;
+    BPlusTree<Double, Tuple> bPlusTree;
     String name;
     int c;
     Distance distance;
@@ -35,7 +35,7 @@ public class QueryGroup {
         this.streamIds = new HashSet<>();
         this.joinQueries = new ArrayList<>();
         this.clusterMap = new HashMap<>();
-        this.bPlusTree = new BPlusTreeNew<Double, Tuple>(128);
+        this.bPlusTree = new BPlusTree<Double, Tuple>(128);
         this.distance = distance;
         this.iDistance = iDistance;
     }
@@ -107,11 +107,11 @@ public class QueryGroup {
         return this.joinQueries;
     }
 
-    public BPlusTreeNew<Double, Tuple> getBPlusTree() {
+    public BPlusTree<Double, Tuple> getBPlusTree() {
         return this.bPlusTree;
     }
 
-    public void setBPlusTree(BPlusTreeNew<Double, Tuple> bPlusTree) {
+    public void setBPlusTree(BPlusTree<Double, Tuple> bPlusTree) {
         this.bPlusTree = bPlusTree;
     }
 
