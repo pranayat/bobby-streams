@@ -124,44 +124,26 @@ public class JoinerBoltNew extends BaseWindowedBolt {
             for (Tuple tuple : inputWindow.getNew()) {
                 QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
                 String tupleClusterId = tuple.getStringByField("clusterId");
-                String tupleStreamId = tuple.getStringByField("streamId");
                 Boolean isReplica = tuple.getBooleanByField("isReplica");
                 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                     String querySumStreamId = joinQuery.getSumStream();
                     String querySumField = joinQuery.getSumField();
-                    int queryJoinCountForCluster = 0;
-                    double queryJoinSumForCluster = 0;
-
+                    String tupleStreamId = tuple.getStringByField("streamId");
+                    Integer tupleApproxJoinCount = 0;
+                    double tupleApproxJoinSum = 0;
+                    
+                    // find approx join counts/sums for non-replicas using sketches as they join with all other non-replicas in the cell
                     if (!isReplica) {
-                        // count_min(C1_S1) ++
-                        // count_min(C1_S1) ++
-                        joinQuery.getPanakosCountSketch().add(tupleClusterId + "_" + tupleStreamId);
-
-                        // count_min_sum(C1_S1) += S1.velocity for query SUM(S1.velocity)
-                        if (tupleStreamId.equals(querySumStreamId)) {
-                            joinQuery.getPanakosSumSketch().add(tupleClusterId + "_" + tupleStreamId, tuple.getDoubleByField(querySumField));
+                        joinQuery.addToCountSketch(tuple);
+                        if (tupleStreamId.equals(joinQuery.getSumStream())) {
+                            joinQuery.addToSumSketch(tuple);
                         }
-
-                        // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3), query1 = JOIN(S1 x S2 x S3)
-                        queryJoinCountForCluster = 1;
-                        for (String streamId : joinQuery.getStreamIds()) {
-                            // don't join this tuple with it's own stream
-                            if (streamId.equals(tupleStreamId)) {
-                                queryJoinCountForCluster *= joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + streamId);
-                            }
-                        }
-
-                        // no point computing sum if no join tuples
-                        if (queryJoinCountForCluster != 0 && joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + querySumStreamId) != 0) {
-                            // query1 = SUM(S1.value)
-                            // join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1)
-                            queryJoinSumForCluster = (queryJoinCountForCluster / joinQuery.getPanakosCountSketch().query(tupleClusterId + "_" + querySumStreamId))
-                                    * joinQuery.getPanakosSumSketch().query(tupleClusterId + "_" + querySumStreamId);
-                        }
+                        tupleApproxJoinCount = joinQuery.approxJoinCount(tuple);
+                        tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
                     }
                     
-                    // isReplica = true
+                    // for replicas we don't know if they are within join range to other replicas so need to find actual join combinations with other replicas/non-replicas
                     else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
                         List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup);
@@ -183,29 +165,27 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                             }
                         }
 
-                        queryJoinCountForCluster = 0;
-                        queryJoinSumForCluster = 0;
                         for (List<Tuple> validJoinCombination : validJoinCombinations) {
-                            queryJoinCountForCluster += 1; // increment for this join combination of tuples
+                            tupleApproxJoinCount += 1; // increment for this join combination of tuples
 
                             for (Tuple joinPartner : validJoinCombination) {
 
                                 // will be true once per join combination
                                 if (joinPartner.getStringByField("streamId").equals(querySumStreamId)) {
-                                    queryJoinSumForCluster += joinPartner.getDoubleByField(querySumField);
+                                    tupleApproxJoinSum += joinPartner.getDoubleByField(querySumField);
                                 }
                             }
                         }
                     }
 
                     // no point emitting if no join partners found
-                    if (queryJoinCountForCluster > 0) {
+                    if (tupleApproxJoinCount > 0) {
                         List<Object> values = new ArrayList<Object>();
                         values.add(joinQuery.getId());
                         values.add(queryGroup.getName());
                         values.add(tupleClusterId);
-                        values.add(queryJoinCountForCluster);
-                        values.add(queryJoinSumForCluster);
+                        values.add(tupleApproxJoinCount);
+                        values.add(tupleApproxJoinSum);
     
                         _collector.emit("aggregateStream", tuple, values);
                     }
@@ -248,6 +228,6 @@ public class JoinerBoltNew extends BaseWindowedBolt {
             declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId", "tupleId", "streamId"));
         }
 
-        declarer.declareStream("aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "queryJoinCountForCluster", "queryJoinSumForCluster"));
+        declarer.declareStream("aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
     }
 }

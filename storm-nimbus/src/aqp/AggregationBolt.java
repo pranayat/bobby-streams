@@ -50,13 +50,13 @@ public class AggregationBolt extends BaseWindowedBolt {
         try {
             for (Tuple tuple : inputWindow.getNew()) {
                 String clusterId = tuple.getStringByField("clusterId");
-                Integer queryJoinCountForCluster = tuple.getIntegerByField("queryJoinCountForCluster");
-                Double queryJoinSumForCluster = tuple.getDoubleByField("queryJoinSumForCluster");
+                Integer tupleApproxJoinCount = tuple.getIntegerByField("tupleApproxJoinCount");
+                Double tupleApproxJoinSum = tuple.getDoubleByField("tupleApproxJoinSum");
                 String joinQueryId = tuple.getStringByField("queryId");
                 JoinQuery joinQuery = getJoinQueryById(joinQueryId);
 
-                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) + queryJoinCountForCluster);
-                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) + queryJoinSumForCluster);
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) + tupleApproxJoinCount);
+                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) + tupleApproxJoinSum);
               }
 
               for (Tuple expiredTuple : inputWindow.getExpired()) {
@@ -83,13 +83,13 @@ public class AggregationBolt extends BaseWindowedBolt {
 
                 // deduct expired counts and sums
                 String clusterId = expiredTuple.getStringByField("clusterId");
-                Integer queryJoinCountForCluster = expiredTuple.getIntegerByField("queryJoinCountForCluster");
-                Double queryJoinSumForCluster = expiredTuple.getDoubleByField("queryJoinSumForCluster");
+                Integer tupleApproxJoinCount = expiredTuple.getIntegerByField("tupleApproxJoinCount");
+                Double tupleApproxJoinSum = expiredTuple.getDoubleByField("tupleApproxJoinSum");
                 String joinQueryId = expiredTuple.getStringByField("queryId");
                 JoinQuery joinQuery = getJoinQueryById(joinQueryId);
 
-                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) - queryJoinCountForCluster);
-                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) - queryJoinSumForCluster);
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) - tupleApproxJoinCount);
+                joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) - tupleApproxJoinSum);
               }
         } catch (Exception e) {
               e.printStackTrace(System.out);

@@ -2,6 +2,7 @@ package aqp;
 
 import org.apache.storm.tuple.Tuple;
 
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,6 +36,54 @@ public class JoinQuery {
         this.clusterJoinSumMap = new HashMap<>();
     }
 
+    public void addToCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        String tupleStreamId = tuple.getStringByField("streamId");
+
+        // count_min(C1_S1) ++
+        // count_min(C1_S1) ++
+        this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId);
+    }
+
+    public void addToSumSketch(Tuple tuple) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        String tupleStreamId = tuple.getStringByField("streamId");
+
+        // count_min_sum(C1_S1) += S1.velocity for query SUM(S1.velocity)
+        this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId, tuple.getDoubleByField(this.sumField));
+    }
+
+    public Integer approxJoinCount(Tuple tuple) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        String tupleStreamId = tuple.getStringByField("streamId");
+
+        // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3), query1 = JOIN(S1 x S2 x S3)
+        Integer tupleApproxJoinCount = 1;
+        for (String streamId : this.streamIds) {
+            // join this tuple with other streams in this cell
+            if (streamId.equals(tupleStreamId)) {
+                tupleApproxJoinCount *= this.panakosCountSketch.query(tupleClusterId + "_" + streamId);
+            }
+        }
+
+        return tupleApproxJoinCount;
+    }
+
+    public Double approxJoinSum(Tuple tuple, Integer tupleApproxJoinCount) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        double tupleApproxJoinSum = 0;
+
+        // no point computing sum if no join tuples
+        if (tupleApproxJoinCount != 0 && this.panakosCountSketch.query(tupleClusterId + "_" + this.sumStream) != 0) {
+            // query1 = SUM(S1.value)
+            // join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1)
+            tupleApproxJoinSum = (tupleApproxJoinCount / this.panakosCountSketch.query(tupleClusterId + "_" + this.sumStream))
+                    * this.panakosSumSketch.query(tupleClusterId + "_" + this.sumStream);
+        }
+        
+        return tupleApproxJoinSum;
+    }
+    
     public Integer aggregateJoinCounts() {
         return this.clusterJoinCountMap.values().stream().mapToInt(Integer::intValue).sum();
     }
