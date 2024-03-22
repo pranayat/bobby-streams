@@ -36,6 +36,21 @@ public class JoinQuery {
         this.clusterJoinSumMap = new HashMap<>();
     }
 
+    public void removeFromCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        String tupleStreamId = tuple.getStringByField("streamId");
+
+        this.panakosCountSketch.remove(tupleClusterId + "_" + tupleStreamId, 1);
+
+    }
+
+    public void removeFromSumSketch(Tuple tuple) throws NoSuchAlgorithmException {
+        String tupleClusterId = tuple.getStringByField("clusterId");
+        String tupleStreamId = tuple.getStringByField("streamId");
+
+        this.panakosSumSketch.remove(tupleClusterId + "_" + tupleStreamId, tuple.getDoubleByField(this.sumField));
+    }
+
     public void addToCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
         String tupleClusterId = tuple.getStringByField("clusterId");
         String tupleStreamId = tuple.getStringByField("streamId");
