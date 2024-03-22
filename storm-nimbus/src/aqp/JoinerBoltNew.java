@@ -208,11 +208,11 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     String querySumField = joinQuery.getSumField();
 
                     if (!isReplica) {
-                        joinQuery.getPanakosCountSketch().add(tupleClusterId + "_" + tupleStreamId, -1);
+                        joinQuery.getPanakosCountSketch().remove(tupleClusterId + "_" + tupleStreamId, 1);
                     }
 
                     if (!isReplica && tupleStreamId.equals(querySumStreamId)) {
-                        joinQuery.getPanakosSumSketch().add(tupleClusterId + "_" + tupleStreamId, -expiredTuple.getDoubleByField(querySumField));
+                        joinQuery.getPanakosSumSketch().remove(tupleClusterId + "_" + tupleStreamId, expiredTuple.getDoubleByField(querySumField));
                     }
                 }
             }

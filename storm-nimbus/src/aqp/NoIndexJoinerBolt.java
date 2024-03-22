@@ -49,28 +49,28 @@ public class NoIndexJoinerBolt extends BaseWindowedBolt {
     public void execute(TupleWindow inputWindow) {
 
         // getNew() will return the one new tuple that slides in
-        for (Tuple tuple : inputWindow.getNew()) {
-            QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+        // for (Tuple tuple : inputWindow.getNew()) {
+        //     QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
 
-            for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-                List<Tuple> joinResults = joinQuery.executeNoIndex(tuple, queryGroup, currentWindow);
+        //     for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+        //         List<Tuple> joinResults = joinQuery.execute(tuple, queryGroup, false, currentWindow);
 
-                for (Tuple joinResult : joinResults) {
-                    _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId(), joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
-                }
+        //         for (Tuple joinResult : joinResults) {
+        //             _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId(), joinResult.getStringByField("tupleId"), joinResult.getStringByField("streamId")));
+        //         }
 
-                if (joinResults.size() == 0) {
-                    _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId(), tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
-                }
-            }
+        //         if (joinResults.size() == 0) {
+        //             _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId(), tuple.getStringByField("tupleId"), tuple.getStringByField("streamId")));
+        //         }
+        //     }
 
-            // a simple list instead of a B+tree
-            currentWindow.add(tuple);
-        }
+        //     // a simple list instead of a B+tree
+        //     currentWindow.add(tuple);
+        // }
 
-        for (int i = 0; i < inputWindow.getExpired().size(); i++) {
-            currentWindow.remove(currentWindow.size() - 1); // remove last element which will also be the oldest element
-        }
+        // for (int i = 0; i < inputWindow.getExpired().size(); i++) {
+        //     currentWindow.remove(currentWindow.size() - 1); // remove last element which will also be the oldest element
+        // }
     }
 
     @Override
