@@ -164,14 +164,23 @@ public class JoinQuery {
         return this.iDistance;
     }
 
-    private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, String streamToJoin, List<Tuple> window) {
+    private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, String streamToJoin, List<Tuple> window, Boolean calculateDistance) {
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : window) {
             if (streamToJoin.equals(joinCandidate.getStringByField("streamId"))) {
-                if (this.distance.calculate(tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance),
-                tupleWrapper.getCoordinates(joinCandidate, this.distance instanceof CosineDistance)) <= this.getRadius()) {
-                    joinCandidatesFromOtherStreams.add(joinCandidate);
+                
+                // use this when doing non-replica to non-replica joins, since all non-replicas are joinable within a cell
+                // so no need to compute distances for these joins, just make sure that join partners are not in the same stream and and are not replicas
+                if (!calculateDistance) {
+                    if (!joinCandidate.getBooleanByField("isReplica")) {
+                        joinCandidatesFromOtherStreams.add(joinCandidate);
+                    }
+                }
+                
+                else if (this.distance.calculate(tupleWrapper.getCoordinates(tuple, this.distance instanceof CosineDistance),
+                    tupleWrapper.getCoordinates(joinCandidate, this.distance instanceof CosineDistance)) <= this.getRadius()) {
+                        joinCandidatesFromOtherStreams.add(joinCandidate);
                 }
             }
         }
@@ -229,7 +238,7 @@ public class JoinQuery {
         return commonElements;
     }
 
-    public List<List<Tuple>> execute(Tuple tuple, QueryGroup queryGroup, Boolean useIndex, List<Tuple> window) {
+    public List<List<Tuple>> execute(Tuple tuple, QueryGroup queryGroup, Boolean useIndex, List<Tuple> window, Boolean calculateDistance) {
         List<String> streamsToJoin = this.streamIds.stream()
                 .filter(s -> !s.equals(tuple.getStringByField("streamId"))).collect(Collectors.toList()); // [b, c]
 
@@ -266,7 +275,7 @@ public class JoinQuery {
                 List<List<Tuple>> combinationJoinPartners = new ArrayList<>();
 
                 for (Tuple element: joinCombination) { // for a1 in [a1, b1]
-                    List<Tuple> elementJoinPartners = useIndex ? this.findJoinPartnersInStream(element, queryGroup, streamToJoin) : this.findJoinPartnersInStreamNoIndex(element, queryGroup, streamToJoin, window); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
+                    List<Tuple> elementJoinPartners = useIndex ? this.findJoinPartnersInStream(element, queryGroup, streamToJoin) : this.findJoinPartnersInStreamNoIndex(element, queryGroup, streamToJoin, window, calculateDistance); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
                     combinationJoinPartners.add(elementJoinPartners); // [a1, b1] - [ [c1, c2, c3], [c1, c2] ]
                 }
 
