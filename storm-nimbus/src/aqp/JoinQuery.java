@@ -149,7 +149,7 @@ public class JoinQuery {
         return this.iDistance;
     }
 
-    private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, List<Tuple> window, String streamToJoin) {
+    private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, String streamToJoin, List<Tuple> window) {
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : window) {
@@ -197,78 +197,6 @@ public class JoinQuery {
         return joinCandidatesFromOtherStreams;
     }
 
-    private Map<String, List<Tuple>> collectJoinPartnerSetByStream(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream) {
-        Map<String, List<Tuple>> result = new HashMap<>();
-
-        for (Map.Entry<String, Map<Tuple, List<Tuple>>> entry : joinPartnersByStream.entrySet()) {
-            String key = entry.getKey();
-            List<Tuple> values = entry.getValue().values().stream()
-                    .flatMap(List::stream)
-                    .collect(Collectors.toList());
-
-            result.put(key, values); // TODO remove duplicate tuples in values
-        }
-
-        return result;
-    }
-
-    private List<Tuple> findIntersectionAcrossStreams(Map<String, List<Tuple>> joinPartnerSetByStream) {
-        if (joinPartnerSetByStream == null || joinPartnerSetByStream.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        Set<Tuple> commonElements = new HashSet<>(joinPartnerSetByStream.values().iterator().next());
-
-        for (List<Tuple> values : joinPartnerSetByStream.values()) {
-            commonElements.retainAll(new HashSet<>(values));
-        }
-
-        return new ArrayList<>(commonElements);
-    }
-
-    private Map<String, Map<Tuple, List<Tuple>>> keepCliqueTuplesOnly(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream, List<Tuple> commonJoinPartnersAcrossStreams) {
-        return joinPartnersByStream.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().entrySet().stream()
-                                .filter(innerEntry -> innerEntry.getValue().stream().anyMatch(tuple -> commonJoinPartnersAcrossStreams.contains(tuple)))
-                                .collect(Collectors.toMap(
-                                        Map.Entry::getKey,
-                                        Map.Entry::getValue
-                                ))
-                ));
-    }
-
-    private Map<String, Map<Tuple, List<Tuple>>> clearJoinPartners(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream) {
-        return joinPartnersByStream.entrySet().stream()
-                .collect(Collectors.toMap(
-                        Map.Entry::getKey,
-                        entry -> entry.getValue().keySet().stream()
-                                .collect(Collectors.toMap(key -> key, key -> new ArrayList<>()))
-                ));
-    }
-
-    private Map<String, Map<Tuple, List<Tuple>>> addIntersection(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream, String streamToJoin, List<Tuple> commonJoinPartnersAcrossStreams) {
-        joinPartnersByStream.put(streamToJoin, new HashMap<Tuple, List<Tuple>>());
-
-        for (Tuple partner : commonJoinPartnersAcrossStreams) {
-            joinPartnersByStream.get(streamToJoin).put(partner, new ArrayList<>());
-        }
-
-        return joinPartnersByStream;
-    }
-
-    private List<Tuple> flattenJoinMap(Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream) {
-        List<Tuple> result = new ArrayList<>();
-
-        for (Map.Entry<String, Map<Tuple, List<Tuple>>> entry : joinPartnersByStream.entrySet()) {
-            Map<Tuple, List<Tuple>> innerMap = entry.getValue();
-            result.addAll(innerMap.keySet());
-        }
-
-        return result;
-    }
-
     private List<Tuple> findCommonElements(List<List<Tuple>> subarrays) {
         List<Tuple> commonElements = new ArrayList<>();
   
@@ -286,7 +214,7 @@ public class JoinQuery {
         return commonElements;
     }
 
-    public List<List<Tuple>> execute(Tuple tuple, QueryGroup queryGroup) {
+    public List<List<Tuple>> execute(Tuple tuple, QueryGroup queryGroup, Boolean useIndex, List<Tuple> window) {
         List<String> streamsToJoin = this.streamIds.stream()
                 .filter(s -> !s.equals(tuple.getStringByField("streamId"))).collect(Collectors.toList()); // [b, c]
 
@@ -323,7 +251,7 @@ public class JoinQuery {
                 List<List<Tuple>> combinationJoinPartners = new ArrayList<>();
 
                 for (Tuple element: joinCombination) { // for a1 in [a1, b1]
-                    List<Tuple> elementJoinPartners = this.findJoinPartnersInStream(element, queryGroup, streamToJoin); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
+                    List<Tuple> elementJoinPartners = useIndex ? this.findJoinPartnersInStream(element, queryGroup, streamToJoin) : this.findJoinPartnersInStreamNoIndex(element, queryGroup, streamToJoin, window); // element a1 - [c1, c2, c3], elment b1 - [c1, c2]
                     combinationJoinPartners.add(elementJoinPartners); // [a1, b1] - [ [c1, c2, c3], [c1, c2] ]
                 }
 
@@ -347,38 +275,5 @@ public class JoinQuery {
         }
 
         return resultCombinations;
-    }
-
-    public List<Tuple> executeNoIndex(Tuple tuple, QueryGroup queryGroup, List<Tuple> window) {
-        List<String> unjoinedStreams = this.streamIds.stream()
-                .filter(s -> !s.equals(tuple.getStringByField("streamId"))).collect(Collectors.toList()); // [b, c]
-
-        Map<Tuple, List<Tuple>> joinPartnersForTuple = new HashMap<>();
-        joinPartnersForTuple.put(tuple, new ArrayList<>()); // { a1: [] }
-        Map<String, Map<Tuple, List<Tuple>>> joinPartnersByStream = new HashMap<>();
-        joinPartnersByStream.put(tuple.getStringByField("streamId"), joinPartnersForTuple); // { a: { a1: [] } }
-
-        for (String streamToJoin : unjoinedStreams) { // c
-
-            for (Map.Entry<String, Map<Tuple, List<Tuple>>> entry : joinPartnersByStream.entrySet()) {
-
-                String leftStream = entry.getKey(); // b
-                Map<Tuple, List<Tuple>> leftStreamTuplePartnersMap = entry.getValue(); // { b1: [], b2: [], b3: [], b4: [] }
-
-                for (Map.Entry<Tuple, List<Tuple>> leftStreamTuplePartnersPair : leftStreamTuplePartnersMap.entrySet()) { // b1: []
-                    Tuple leftTuple = leftStreamTuplePartnersPair.getKey(); // b1
-                    List<Tuple> joinPartners = this.findJoinPartnersInStreamNoIndex(leftTuple, queryGroup, window, streamToJoin);
-                    joinPartnersByStream.get(leftStream).put(leftTuple, joinPartners); // { b: { b1: [c1, c2] } }
-                }
-            }
-
-            Map<String, List<Tuple>> joinPartnerSetByStream = this.collectJoinPartnerSetByStream(joinPartnersByStream); // { a: [c1, c2, c3], b: [c1, c2, c4] }
-            List<Tuple> commonJoinPartnersAcrossStreams = this.findIntersectionAcrossStreams(joinPartnerSetByStream); // [c1, c2]
-            joinPartnersByStream = this.keepCliqueTuplesOnly(joinPartnersByStream, commonJoinPartnersAcrossStreams); // containing c1 or c2
-            joinPartnersByStream = this.clearJoinPartners(joinPartnersByStream);
-            joinPartnersByStream = this.addIntersection(joinPartnersByStream, streamToJoin, commonJoinPartnersAcrossStreams);
-        }
-
-        return this.flattenJoinMap(joinPartnersByStream);
     }
 }

@@ -146,7 +146,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     // for replicas we don't know if they are within join range to other replicas so need to find actual join combinations with other replicas/non-replicas
                     else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
-                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup);
+                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null);
                         List<List<Tuple>> validJoinCombinations = new ArrayList<>();
 
                         for (List<Tuple> joinCombination : joinCombinations) {
