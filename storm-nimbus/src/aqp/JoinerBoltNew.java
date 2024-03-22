@@ -200,19 +200,17 @@ public class JoinerBoltNew extends BaseWindowedBolt {
             for (Tuple expiredTuple : inputWindow.getExpired()) {
                 QueryGroup queryGroup = getQueryGroupByName(expiredTuple.getStringByField("queryGroupName"));
                 Boolean isReplica = expiredTuple.getBooleanByField("isReplica");
-                String tupleClusterId = expiredTuple.getStringByField("clusterId");
                 String tupleStreamId = expiredTuple.getStringByField("streamId");
                 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                     String querySumStreamId = joinQuery.getSumStream();
-                    String querySumField = joinQuery.getSumField();
 
                     if (!isReplica) {
-                        joinQuery.getPanakosCountSketch().remove(tupleClusterId + "_" + tupleStreamId, 1);
+                        joinQuery.removeFromCountSketch(expiredTuple);
                     }
 
                     if (!isReplica && tupleStreamId.equals(querySumStreamId)) {
-                        joinQuery.getPanakosSumSketch().remove(tupleClusterId + "_" + tupleStreamId, expiredTuple.getDoubleByField(querySumField));
+                        joinQuery.removeFromSumSketch(expiredTuple);
                     }
                 }
             }
