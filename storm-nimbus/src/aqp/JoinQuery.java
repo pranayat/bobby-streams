@@ -42,7 +42,7 @@ public class JoinQuery {
 
         // count_min(C1_S1) ++
         // count_min(C1_S1) ++
-        this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId);
+        this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId, 1);
     }
 
     public void addToSumSketch(Tuple tuple) throws NoSuchAlgorithmException {
