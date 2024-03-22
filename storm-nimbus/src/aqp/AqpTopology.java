@@ -22,21 +22,21 @@ public class AqpTopology {
         }
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
-            // should have only 1 instance
-            BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner",
-                    new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(1000),
-                            new BaseWindowedBolt.Count(1000)),
-                    1);
-            for (Stream stream : schemaConfig.getStreams()) {
-                kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
-            }
-            builder.setBolt("joiner", new JoinerBolt()
-            .withWindow(Count.of(1000)), 2)
-            .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
+            // // should have only 1 instance
+            // BoltDeclarer kMeansClusterAssignerBolt = builder.setBolt("kMeansClusterAssigner",
+            //         new KMeansClusterAssignerBolt().withWindow(new BaseWindowedBolt.Count(1000),
+            //                 new BaseWindowedBolt.Count(1000)),
+            //         1);
+            // for (Stream stream : schemaConfig.getStreams()) {
+            //     kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
+            // }
+            // builder.setBolt("joiner", new JoinerBolt()
+            // .withWindow(Count.of(1000)), 2)
+            // .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
 
         } else {
-            // can have multiple instances as entire data is not needed for clustering
-            BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBoltNew(), 1);
+            // can have multiple instances
+            BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
             for (Stream stream : schemaConfig.getStreams()) {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }

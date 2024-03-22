@@ -78,7 +78,7 @@ public class AggregationBolt extends BaseWindowedBolt {
                   values.add(joinSum);
                   values.add(joinAvg);
 
-                  _collector.emit("aggregateStream", expiredTuple, values);
+                  _collector.emit(joinQuery.getId() + "_aggregateStream", expiredTuple, values);
                 }
 
                 // deduct expired counts and sums
@@ -98,6 +98,8 @@ public class AggregationBolt extends BaseWindowedBolt {
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declareStream("aggregateStream", new Fields("queryId", "queryJoinCount", "queryJoinSum", "queryJoinAvg"));
+      for (Query query : schemaConfig.getQueries()) {
+        declarer.declareStream(query.getId() + "_aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
+      }
     }
 }
