@@ -14,13 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class JoinerBoltNew extends BaseWindowedBolt {
+public class JoinSecondStageBolt extends BaseWindowedBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
 
-    public JoinerBoltNew() {
+    public JoinSecondStageBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -146,7 +146,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
                     // for replicas we don't know if they are within join range to other replicas so need to find actual join combinations with other replicas/non-replicas
                     else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
-                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null);
+                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
                         List<List<Tuple>> validJoinCombinations = new ArrayList<>();
 
                         for (List<Tuple> joinCombination : joinCombinations) {
@@ -222,10 +222,7 @@ public class JoinerBoltNew extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Query query : schemaConfig.getQueries()) {
-            declarer.declareStream(query.getId() + "_resultStream", new Fields("queryId", "tupleId", "streamId"));
-            declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId", "tupleId", "streamId"));
+            declarer.declareStream(query.getId() + "_aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
         }
-
-        declarer.declareStream("aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
     }
 }
