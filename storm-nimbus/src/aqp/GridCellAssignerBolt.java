@@ -142,7 +142,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
                   isReplica = false;
                 }
 
-                // emit only to the home cell of the tuple OR a valid replication target
+                // emit only to the home cell of the tuple (isReplica=false) OR a valid replication target
                 if (!isReplica || isValidTargetCell(targetCell, tupleCell)) {
                   // add this target cell once per query group and not multiple times for each individual query
                   replicationCells.add(targetCell);

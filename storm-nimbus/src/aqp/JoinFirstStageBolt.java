@@ -138,7 +138,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                     // join non-replicas with all other non-replicas in the cell
                     // so no need to use index or even calculate distances, just make sure that join partners are not in the same stream and and are not replicas
                     if (!isReplica) {
-                        validJoinCombinations = joinQuery.execute(tuple, queryGroup, false, inputWindow.getNew(), false);
+                        validJoinCombinations = joinQuery.execute(tuple, queryGroup, false, inputWindow.get(), false);
                     }
 
                     // for replicas we don't know if they are within join range to other replicas so
@@ -175,6 +175,10 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                     int i = 0;
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
                         i++;
+                        if (validJoinCombination.size() > 2) {
+                            System.out.println(isReplica);
+                        }
+
                         for (Tuple joinTuple : validJoinCombination) {
 
                             Stream tupleStream = this.schemaConfig.getStreamById(joinTuple.getStringByField("streamId"));
@@ -188,7 +192,10 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                             }
 
                             values.add(joinTuple.getStringByField("streamId"));
-                            values.add(tuple.getStringByField("tupleId").concat("-" + String.valueOf(i))); // the anchor tuple's id + combination count identifies the join combination
+
+                             // the anchor tuple's id + combination count + isReplica identifies the join combination
+                             // tells us which tuple triggered the join, which join combination we are looking at and whether this tuple was a replica or not
+                            values.add(tuple.getStringByField("tupleId").concat("-" + String.valueOf(i) + "-" + isReplica));
 
                             // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
                             // each query has its own result stream

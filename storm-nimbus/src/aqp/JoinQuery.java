@@ -172,8 +172,11 @@ public class JoinQuery {
                 
                 // use this when doing non-replica to non-replica joins, since all non-replicas are joinable within a cell
                 // so no need to compute distances for these joins, just make sure that join partners are not in the same stream and and are not replicas
+                // also make sure that we join the non-replica with other non-replicas in the same cell
                 if (!calculateDistance) {
-                    if (!joinCandidate.getBooleanByField("isReplica")) {
+                    if (!joinCandidate.getBooleanByField("isReplica") &&
+                        joinCandidate.getStringByField("clusterId").equals(tuple.getStringByField("clusterId"))) {
+
                         joinCandidatesFromOtherStreams.add(joinCandidate);
                     }
                 }
