@@ -10,6 +10,7 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -175,9 +176,13 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                     int i = 0;
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
                         i++;
-                        if (validJoinCombination.size() > 2) {
-                            System.out.println(isReplica);
+
+                        List<String> joinCombinationTupleIds = new ArrayList<String>();
+                        for (Tuple t : validJoinCombination) {
+                            joinCombinationTupleIds.add(t.getStringByField("tupleId"));
                         }
+                        Collections.sort(joinCombinationTupleIds);
+                        String joinCombinationId = String.join("-", joinCombinationTupleIds);
 
                         for (Tuple joinTuple : validJoinCombination) {
 
@@ -192,10 +197,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                             }
 
                             values.add(joinTuple.getStringByField("streamId"));
-
-                             // the anchor tuple's id + combination count + isReplica identifies the join combination
-                             // tells us which tuple triggered the join, which join combination we are looking at and whether this tuple was a replica or not
-                            values.add(tuple.getStringByField("tupleId").concat("-" + String.valueOf(i) + "-" + isReplica));
+                            values.add(joinCombinationId);
 
                             // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
                             // each query has its own result stream
