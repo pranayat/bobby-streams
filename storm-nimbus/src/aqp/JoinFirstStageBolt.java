@@ -173,7 +173,26 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                     }
 
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
-                        _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(joinQuery.getId()));
+                        for (Tuple joinTuple : validJoinCombination) {
+
+                            Stream tupleStream = this.schemaConfig.getStreamById(joinTuple.getStringByField("streamId"));
+                            List<Object> values = new ArrayList<Object>();
+                            for (Field field : tupleStream.getFields()) {
+                                if (field.getType().equals("double")) {
+                                    values.add(joinTuple.getDoubleByField(field.getName()));
+                                } else {
+                                    values.add(joinTuple.getStringByField(field.getName()));
+                                }
+                            }
+
+                            values.add(joinTuple.getStringByField("streamId"));
+                            values.add(tuple.getStringByField("tupleId")); // the anchor tuple's id - this tuple's id identifies the join combination
+
+                            // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
+                            // each query has its own result stream
+                            // each join results is anchored by the input tuple that triggered the join 
+                            _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(values.toArray()));
+                        }
                     }
                 }
 
@@ -189,8 +208,13 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Query query : schemaConfig.getQueries()) {
-            declarer.declareStream(query.getId() + "_resultStream", new Fields("queryId"));
             declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId"));
+            
+            Stream stream = this.schemaConfig.getStreams().get(0);
+            List<String> fields = new ArrayList<String>(stream.getFieldNames());
+            fields.add("streamId");
+            fields.add("sourceTuple");
+            declarer.declareStream(query.getId() + "_resultStream", new Fields(fields));
         }
     }
 }

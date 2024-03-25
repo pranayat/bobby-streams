@@ -10,6 +10,7 @@ public class ResultBolt extends BaseBasicBolt {
   @Override
   public void execute(Tuple tuple, BasicOutputCollector collector) {
       // this bolt is only for acking join result tuples from JoinerBolt
+      System.out.println(tuple);
   }
 
   @Override
