@@ -17,9 +17,11 @@ public class DataSpout extends BaseRichSpout {
     private SpoutOutputCollector collector;
     private Random random;
     private SchemaConfig schemaConfig;
+    private String streamId;
 
-    public DataSpout() {
+    public DataSpout(String streamId) {
         this.schemaConfig = SchemaConfigBuilder.build();
+        this.streamId = streamId;
     }
 
     @Override
@@ -30,21 +32,28 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void nextTuple() {
-        double latitude = generateRandomCoordinate(10000, 50000);
-        double longitude = generateRandomCoordinate(1000, 50000);
-        double altitude = generateRandomCoordinate(1000, 50000);
-        double text = generateRandomDouble();
 
-        // for a join radius of 2300 only A1, B1, C1 should join
-        collector.emit(new Values("stream_1", UUID.randomUUID().toString(), 0.0, 0.0, 0.0, text)); // A1
-        collector.emit(new Values("stream_2", UUID.randomUUID().toString(), 2000.0, 0.0, 0.0, text)); // B1
-        collector.emit(new Values("stream_3", UUID.randomUUID().toString(), 0.0, 1000.0, 0.0, text)); // C1
-
-        collector.emit(new Values("stream_2", UUID.randomUUID().toString(), 3000.0, 0.0, 0.0, text));
-        collector.emit(new Values("stream_2", UUID.randomUUID().toString(), 0.0, 3000.0, 0.0, text));
-
-        collector.emit(new Values("stream_3", UUID.randomUUID().toString(), 0.0, 2000.0, 3000.0, text));
-        collector.emit(new Values("stream_3", UUID.randomUUID().toString(), 3000.0, 2000.0, 0.0, text));
+        String id = "";
+        if (this.streamId.equals("stream_1")) {
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 20.0, 80.0, 100.0, "stream_1"), id); // T1
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 40.0, 60.0, 100.0, "stream_1"), id); // T4
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 60.0, 30.0, 100.0, "stream_1"), id); // T6
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 80.0, 20.0, 100.0, "stream_1"), id); // T8
+        } else if (this.streamId.equals("stream_2")) {
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 20.0, 70.0, 100.0, "stream_2"), id); // T2
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 60.0, 40.0, 100.0, "stream_2"), id); // T5
+        } else {
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 30.0, 70.0, 100.0, "stream_3"), id); // T3
+            id = UUID.randomUUID().toString();
+            collector.emit(new Values(id, 70.0, 30.0, 100.0, "stream_3"), id); // T7
+        }
 
         try {
             Thread.sleep(1000);
@@ -63,10 +72,5 @@ public class DataSpout extends BaseRichSpout {
 
     private double generateRandomCoordinate(double min, double max) {
         return min + (max - min) * random.nextDouble();
-    }
-
-    private Double generateRandomDouble() {
-        Double[] texts = { 1.0, 2.0, 3.0, 4.0, 5.0 };
-        return texts[random.nextInt(texts.length)];
     }
 }

@@ -18,7 +18,8 @@ public class AqpTopology {
         TopologyBuilder builder = new TopologyBuilder();
 
         for (Stream stream : schemaConfig.getStreams()) {
-            builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+            // builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+            builder.setSpout(stream.getId().concat("_spout"), new DataSpout(stream.getId()), 1);
         }
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {

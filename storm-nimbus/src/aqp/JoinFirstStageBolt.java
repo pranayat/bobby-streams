@@ -172,7 +172,9 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                         _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId()));
                     }
 
+                    int i = 0;
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
+                        i++;
                         for (Tuple joinTuple : validJoinCombination) {
 
                             Stream tupleStream = this.schemaConfig.getStreamById(joinTuple.getStringByField("streamId"));
@@ -186,7 +188,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                             }
 
                             values.add(joinTuple.getStringByField("streamId"));
-                            values.add(tuple.getStringByField("tupleId")); // the anchor tuple's id - this tuple's id identifies the join combination
+                            values.add(tuple.getStringByField("tupleId").concat("-" + String.valueOf(i))); // the anchor tuple's id + combination count identifies the join combination
 
                             // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
                             // each query has its own result stream
@@ -213,7 +215,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
             Stream stream = this.schemaConfig.getStreams().get(0);
             List<String> fields = new ArrayList<String>(stream.getFieldNames());
             fields.add("streamId");
-            fields.add("sourceTuple");
+            fields.add("joinId");
             declarer.declareStream(query.getId() + "_resultStream", new Fields(fields));
         }
     }
