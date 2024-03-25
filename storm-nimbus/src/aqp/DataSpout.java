@@ -18,10 +18,12 @@ public class DataSpout extends BaseRichSpout {
     private Random random;
     private SchemaConfig schemaConfig;
     private String streamId;
+    Boolean once;
 
     public DataSpout(String streamId) {
         this.schemaConfig = SchemaConfigBuilder.build();
         this.streamId = streamId;
+        this.once = false;
     }
 
     @Override
@@ -32,6 +34,10 @@ public class DataSpout extends BaseRichSpout {
 
     @Override
     public void nextTuple() {
+
+        if(this.once) {
+            return;
+        }
 
         String id = "";
         if (this.streamId.equals("stream_1")) {
@@ -54,6 +60,8 @@ public class DataSpout extends BaseRichSpout {
             id = UUID.randomUUID().toString();
             collector.emit(new Values(id, 70.0, 30.0, 100.0, "stream_3"), id); // T7
         }
+
+        this.once = true;
 
         try {
             Thread.sleep(1000);

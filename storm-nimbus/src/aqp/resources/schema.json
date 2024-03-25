@@ -16,19 +16,7 @@
           "type": "double"
         },
         {
-          "name": "geoaltitude",
-          "type": "double"
-        },
-        {
-          "name": "baroaltitude",
-          "type": "double"
-        },
-        {
           "name": "velocity",
-          "type": "double"
-        },
-        {
-          "name": "heading",
           "type": "double"
         }
       ]
@@ -49,19 +37,7 @@
           "type": "double"
         },
         {
-          "name": "geoaltitude",
-          "type": "double"
-        },
-        {
-          "name": "baroaltitude",
-          "type": "double"
-        },
-        {
           "name": "velocity",
-          "type": "double"
-        },
-        {
-          "name": "heading",
           "type": "double"
         }
       ]
@@ -82,19 +58,7 @@
           "type": "double"
         },
         {
-          "name": "geoaltitude",
-          "type": "double"
-        },
-        {
-          "name": "baroaltitude",
-          "type": "double"
-        },
-        {
           "name": "velocity",
-          "type": "double"
-        },
-        {
-          "name": "heading",
           "type": "double"
         }
       ]
@@ -105,47 +69,19 @@
   },
   "queries": [
     {
-      "id": "query_1",
-      "stages": [
-        {
-          "type": "join",
-          "between": [
-            "stream_1",
-            "stream_2",
-            "stream_3"
-          ],
-          "on": [
-            "lat",
-            "lon",
-            "geoaltitude"
-          ],
-          "radius": 20,
-          "distanceType": "euclidean"
-        },
-        {
-          "type": "sum",
-          "on": [
-            "stream_1.velocity"
-          ]
-        }
-      ]
-    },
-    {
       "id": "query_2",
       "stages": [
         {
           "type": "join",
           "between": [
             "stream_1",
-            "stream_2",
-            "stream_3"
+            "stream_2"
           ],
           "on": [
             "lat",
-            "lon",
-            "geoaltitude"
+            "lon"
           ],
-          "radius": 30,
+          "radius": 56.5685,
           "distanceType": "euclidean"
         },
         {
