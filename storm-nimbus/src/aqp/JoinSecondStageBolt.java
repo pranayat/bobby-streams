@@ -124,7 +124,6 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
             for (Tuple tuple : inputWindow.getNew()) {
                 QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
                 String tupleClusterId = tuple.getStringByField("clusterId");
-                Boolean isReplica = tuple.getBooleanByField("isReplica");
                 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                     String querySumStreamId = joinQuery.getSumStream();
@@ -133,7 +132,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
                     Integer tupleApproxJoinCount = 0;
                     double tupleApproxJoinSum = 0;
                     
-                    // find approx join counts/sums for non-replicas using sketches as they join with all other non-replicas in the cell
+                    // find approx join counts/sums  using sketches for tuples completely enclosed by the cell wrt the join query radius (can be replica or non replica)
                     if (joinQuery.isTupleEnclosedByClusterForQueryRadius(tuple)) {
                         joinQuery.addToCountSketch(tuple);
                         if (tupleStreamId.equals(joinQuery.getSumStream())) {
@@ -143,7 +142,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
                         tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
                     }
                     
-                    // for replicas we don't know if they are within join range to other replicas so need to find actual join combinations with other replicas/non-replicas
+                    // for tuples whose join query sphere just intersects this cluster (for replica tuples only) we don't know if they are within join range to other tuples in the cluster so need to find actual join combinations
                     else {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
                         List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
