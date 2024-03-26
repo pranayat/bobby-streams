@@ -131,19 +131,17 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
 
             for (Tuple tuple : inputWindow.getNew()) {
                 QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-                Boolean isReplica = tuple.getBooleanByField("isReplica");
 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                     List<List<Tuple>> validJoinCombinations = new ArrayList<>();
 
-                    // join non-replicas with all other non-replicas in the cell
-                    // so no need to use index or even calculate distances, just make sure that join partners are not in the same stream and and are not replicas
-                    if (!isReplica) {
+                    // join tuples completely enclosed by a cell with other tuples completely enclosed by a cell, (whether replica or otherwise)
+                    // so no need to use index or even calculate distances, just make sure that join partners are not in the same stream and are completely enclosed by the cluster for this query
+                    if (joinQuery.isTupleEnclosedByClusterForQueryRadius(tuple)) {
                         validJoinCombinations = joinQuery.execute(tuple, queryGroup, false, inputWindow.get(), false);
                     }
 
-                    // for replicas we don't know if they are within join range to other replicas so
-                    // need to find actual join combinations with other replicas/non-replicas
+                    // for tuples whose join query sphere just intersects this cluster (for replica tuples only)
                     else {
                         List<List<Tuple>> joinCombinations = new ArrayList<>();
                         // - find join partners in index using join radius r of current query - there

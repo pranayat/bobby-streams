@@ -134,7 +134,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
                     double tupleApproxJoinSum = 0;
                     
                     // find approx join counts/sums for non-replicas using sketches as they join with all other non-replicas in the cell
-                    if (!isReplica) {
+                    if (joinQuery.isTupleEnclosedByClusterForQueryRadius(tuple)) {
                         joinQuery.addToCountSketch(tuple);
                         if (tupleStreamId.equals(joinQuery.getSumStream())) {
                             joinQuery.addToSumSketch(tuple);

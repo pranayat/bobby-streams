@@ -43,16 +43,16 @@ public class AqpTopology {
             }
 
             builder.setBolt("joinerSecondStage", new JoinSecondStageBolt()
-                .withWindow(Count.of(1000)), 2)
+                .withWindow(Count.of(1000)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
             builder.setBolt("joinerFirstStage", new JoinFirstStageBolt()
-                .withWindow(Count.of(1000)), 2)
+                .withWindow(Count.of(1000)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));                
         }
 
-        BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 2);
-        BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 2);
+        BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 1);
+        BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 1);
         BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt().withWindow(Count.of(1000)), 1);
 
         for (Query query : schemaConfig.getQueries()) {

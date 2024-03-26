@@ -164,17 +164,21 @@ public class JoinQuery {
         return this.iDistance;
     }
 
+    public Boolean isTupleEnclosedByClusterForQueryRadius(Tuple tuple) {
+        return tuple.getStringByField("enclosedBy").contains(this.id);
+    }
+
     private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, String streamToJoin, List<Tuple> window, Boolean calculateDistance) {
         TupleWrapper tupleWrapper = new TupleWrapper(queryGroup.getAxisNamesSorted());
         List<Tuple> joinCandidatesFromOtherStreams = new ArrayList<>();
         for (Tuple joinCandidate : window) {
             if (streamToJoin.equals(joinCandidate.getStringByField("streamId"))) {
                 
-                // use this when doing non-replica to non-replica joins, since all non-replicas are joinable within a cell
-                // so no need to compute distances for these joins, just make sure that join partners are not in the same stream and and are not replicas
-                // also make sure that we join the non-replica with other non-replicas in the same cell
+                // use this to joins tuples that are completely inside the cluster wrt the query raidus
+                // so no need to compute distances for these joins, just make sure that join partners are not in the same stream and are also completely enclosed inside the cluster wrt the query radius
+                // such join partners can be both replicas and non replicas - they just need to be enclosed by the (same) cell for this query radius
                 if (!calculateDistance) {
-                    if (!joinCandidate.getBooleanByField("isReplica") &&
+                    if (this.isTupleEnclosedByClusterForQueryRadius(joinCandidate) &&
                         joinCandidate.getStringByField("clusterId").equals(tuple.getStringByField("clusterId"))) {
 
                         joinCandidatesFromOtherStreams.add(joinCandidate);
