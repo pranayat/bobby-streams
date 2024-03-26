@@ -272,9 +272,10 @@ public class JoinQuery {
             int levelSize = joinCombinations.size();
             String streamToJoin = streamsToJoin.get(j);
 
+            // a level contains multiple join combinations wich will now be joined with the next stream 'j'
             for (int i = 0; i < levelSize; i++) {
 
-                List<Tuple> joinCombination = joinCombinations.poll(); // [a1, b1]
+                List<Tuple> joinCombination = joinCombinations.poll(); // remove [a1, b1] from [ [a1, b1], [a1, b2] ]
                 List<List<Tuple>> combinationJoinPartners = new ArrayList<>();
 
                 for (Tuple element: joinCombination) { // for a1 in [a1, b1]
@@ -289,16 +290,23 @@ public class JoinQuery {
                     List<Tuple> extendedJoinCombination = new ArrayList<>();
                     extendedJoinCombination.addAll(joinCombination);
                     extendedJoinCombination.add(combinationCommonJoinPartner); // [a1, b1] got extended to [a1, b1, c1]
-                    joinCombinations.offer(extendedJoinCombination); // [ [a1] [a1, b1], [a1, b2], [a1, b1, c1] ]
+                    joinCombinations.offer(extendedJoinCombination); // [ [a1, b2], [a1, b1, c1] ]
                 }
 
-                // we just joined the last stream so add the join combinations
-                if (j == streamsToJoin.size() - 1) {
-                    resultCombinations.addAll(joinCombinations);
+                // we polled [a1, b1] and then [a2, b2] from joinCombinations but found not partners in stream c to add back to joinCombinations
+                // so join joinCombinations is empty
+                // return early with empty result
+                if (joinCombinations.isEmpty()) {
+                    return resultCombinations;
                 }
             }
+            
+            // we just joined the last stream so add the join combinations
+            if (j == streamsToJoin.size() - 1) {
+                resultCombinations.addAll(joinCombinations);
+            }
 
-            j++; // done with this level, join next stream at next level
+            j++; // done with this stream, join next stream
         }
 
         return resultCombinations;

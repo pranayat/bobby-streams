@@ -173,9 +173,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                         _collector.emit(joinQuery.getId() + "_noResultStream", tuple, new Values(joinQuery.getId()));
                     }
 
-                    int i = 0;
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
-                        i++;
 
                         List<String> joinCombinationTupleIds = new ArrayList<String>();
                         for (Tuple t : validJoinCombination) {
