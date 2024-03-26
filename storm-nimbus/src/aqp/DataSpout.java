@@ -39,26 +39,17 @@ public class DataSpout extends BaseRichSpout {
             return;
         }
 
-        String id = "";
         if (this.streamId.equals("stream_1")) {
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 20.0, 80.0, 100.0, "stream_1"), id); // T1
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 40.0, 60.0, 100.0, "stream_1"), id); // T4
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 60.0, 30.0, 100.0, "stream_1"), id); // T6
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 80.0, 20.0, 100.0, "stream_1"), id); // T8
+            collector.emit(new Values("T1_S1", 10.0, 70.0, 100.0, "stream_1"), "T1_S1"); // T1
+            collector.emit(new Values("T4_S1", 30.0, 50.0, 100.0, "stream_1"), "T4_S1"); // T4
+            collector.emit(new Values("T6_S1", 50.0, 20.0, 100.0, "stream_1"), "T6_S1"); // T6
+            collector.emit(new Values("T8_S1", 70.0, 10.0, 100.0, "stream_1"), "T8_S1"); // T8
         } else if (this.streamId.equals("stream_2")) {
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 20.0, 70.0, 100.0, "stream_2"), id); // T2
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 60.0, 40.0, 100.0, "stream_2"), id); // T5
+            collector.emit(new Values("T2_S2", 10.0, 60.0, 100.0, "stream_2"), "T2_S2"); // T2
+            collector.emit(new Values("T5_S2", 50.0, 30.0, 100.0, "stream_2"), "T5_S2"); // T5
         } else {
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 30.0, 70.0, 100.0, "stream_3"), id); // T3
-            id = UUID.randomUUID().toString();
-            collector.emit(new Values(id, 70.0, 30.0, 100.0, "stream_3"), id); // T7
+            collector.emit(new Values("T3_S3", 20.0, 60.0, 100.0, "stream_3"), "T3_S3"); // T3
+            collector.emit(new Values("T7_S3", 60.0, 20.0, 100.0, "stream_3"), "T7_S3"); // T7
         }
 
         this.once = true;
