@@ -142,7 +142,7 @@ public class JoinFirstStageBolt extends BaseWindowedBolt {
                     }
 
                     // for tuples whose join query sphere just intersects this cluster (for replica tuples only)
-                    else {
+                    else if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
                         List<List<Tuple>> joinCombinations = new ArrayList<>();
                         // - find join partners in index using join radius r of current query - there
                         // should be atleast one non-replica tuple in the join result combination

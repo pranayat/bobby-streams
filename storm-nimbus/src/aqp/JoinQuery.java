@@ -72,11 +72,13 @@ public class JoinQuery {
         String tupleClusterId = tuple.getStringByField("clusterId");
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3), query1 = JOIN(S1 x S2 x S3)
+        // query1 = JOIN(S1 x S2 x S3)
+        // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3)
+        // so for incoming tuple T1_S1 in cell C1, joining with streams S2 and S3 - join_count = count_min(C1_S2) x count_min(C2_S3)
         Integer tupleApproxJoinCount = 1;
         for (String streamId : this.streamIds) {
             // join this tuple with other streams in this cell
-            if (streamId.equals(tupleStreamId)) {
+            if (!streamId.equals(tupleStreamId)) {
                 tupleApproxJoinCount *= this.panakosCountSketch.query(tupleClusterId + "_" + streamId);
             }
         }
@@ -166,6 +168,10 @@ public class JoinQuery {
 
     public Boolean isTupleEnclosedByClusterForQueryRadius(Tuple tuple) {
         return tuple.getStringByField("enclosedBy").contains(this.id);
+    }
+
+    public Boolean isTupleIntersectedByClusterForQueryRadius(Tuple tuple) {
+        return tuple.getStringByField("intersectedBy").contains(this.id);
     }
 
     private List<Tuple> findJoinPartnersInStreamNoIndex(Tuple tuple, QueryGroup queryGroup, String streamToJoin, List<Tuple> window, Boolean calculateDistance) {

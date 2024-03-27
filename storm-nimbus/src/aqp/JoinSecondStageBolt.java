@@ -143,7 +143,7 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
                     }
                     
                     // for tuples whose join query sphere just intersects this cluster (for replica tuples only) we don't know if they are within join range to other tuples in the cluster so need to find actual join combinations
-                    else {
+                    else if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
                         // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
                         List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
                         List<List<Tuple>> validJoinCombinations = new ArrayList<>();

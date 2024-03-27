@@ -57,30 +57,26 @@ public class AggregationBolt extends BaseWindowedBolt {
 
                 joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) + tupleApproxJoinCount);
                 joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) + tupleApproxJoinSum);
+
+                // aggregate counts and sums across clusters
+                Integer joinCount = joinQuery.aggregateJoinCounts();
+                Double joinSum = joinQuery.aggregateJoinSums();
+                Double joinAvg = 0.0;
+
+                if (joinCount != 0) {
+                  joinAvg = joinSum / joinCount;
+                }
+
+                List<Object> values = new ArrayList<Object>();
+                values.add(joinQuery.getId());
+                values.add(joinCount);
+                values.add(joinSum);
+                values.add(joinAvg);
+
+                _collector.emit(joinQuery.getId() + "_aggregateStream", tuple, values);
               }
 
               for (Tuple expiredTuple : inputWindow.getExpired()) {
-
-                // emit aggregates everytime the window slides
-                for (JoinQuery joinQuery : joinQueries) {
-                  // aggregate counts and sums across clusters
-                  Integer joinCount = joinQuery.aggregateJoinCounts();
-                  Double joinSum = joinQuery.aggregateJoinSums();
-                  Double joinAvg = 0.0;
-
-                  if (joinCount != 0) {
-                    joinAvg = joinSum / joinCount;
-                  }
-
-                  List<Object> values = new ArrayList<Object>();
-                  values.add(joinQuery.getId());
-                  values.add(joinCount);
-                  values.add(joinSum);
-                  values.add(joinAvg);
-
-                  _collector.emit(joinQuery.getId() + "_aggregateStream", expiredTuple, values);
-                }
-
                 // deduct expired counts and sums
                 String clusterId = expiredTuple.getStringByField("clusterId");
                 Integer tupleApproxJoinCount = expiredTuple.getIntegerByField("tupleApproxJoinCount");
@@ -99,7 +95,7 @@ public class AggregationBolt extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
       for (Query query : schemaConfig.getQueries()) {
-        declarer.declareStream(query.getId() + "_aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
+        declarer.declareStream(query.getId() + "_aggregateStream", new Fields("queryId", "joinCount", "joinSum", "joinAvg"));
       }
     }
 }

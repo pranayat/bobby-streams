@@ -42,23 +42,26 @@ public class AqpTopology {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
 
-            builder.setBolt("joinerSecondStage", new JoinSecondStageBolt()
-                .withWindow(Count.of(1000)), 1)
+            builder.setBolt("joinerFirstStage", new JoinFirstStageBolt()
+                .withWindow(Count.of(100000)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
-            builder.setBolt("joinerFirstStage", new JoinFirstStageBolt()
-                .withWindow(Count.of(1000)), 1)
-                .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));                
+            builder.setBolt("joinerSecondStage", new JoinSecondStageBolt()
+                .withWindow(Count.of(100000)), 1)
+                .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
+
         }
 
         BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 1);
         BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 1);
-        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt().withWindow(Count.of(1000)), 1);
+        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt().withWindow(Count.of(100000)), 1);
 
         for (Query query : schemaConfig.getQueries()) {
             resultBolt.shuffleGrouping("joinerFirstStage", query.getId() + "_resultStream");
             noResultBolt.shuffleGrouping("joinerFirstStage", query.getId() + "_noResultStream");
+
             aggregationBolt.fieldsGrouping("joinerSecondStage", query.getId() + "_aggregateStream", new Fields("queryId", "clusterId"));
+            resultBolt.fieldsGrouping("aggregator", query.getId() + "_aggregateStream", new Fields("queryId"));
         }
 
         Config conf = new Config();

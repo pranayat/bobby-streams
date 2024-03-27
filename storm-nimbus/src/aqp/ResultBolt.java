@@ -17,7 +17,8 @@ import org.apache.storm.tuple.Tuple;
 public class ResultBolt extends BaseRichBolt {
 
   OutputCollector _collector;
-  private BufferedWriter writer;
+  private BufferedWriter joinTuplesWriter;
+  private BufferedWriter joinAggregationWriter;
 
   @Override
   public void prepare(
@@ -29,20 +30,27 @@ public class ResultBolt extends BaseRichBolt {
       Path projectRoot = Paths.get("").toAbsolutePath();
         
       // Specify the relative path from the project root to your file
-      String relativePath = "output.txt";
+      String joinTuplesFileName = "join_tuples.txt";
+      String joinAggregationFileName = "join_aggregates.txt";
       
       // Construct the absolute file path
-      String absolutePath = projectRoot.resolve(relativePath).toString();
+      String joinTuplesFilePath = projectRoot.resolve(joinTuplesFileName).toString();
+      String joinAggregationFilePath = projectRoot.resolve(joinAggregationFileName).toString();
 
-      Path file = Paths.get(absolutePath);
+      Path joinTuplesFile = Paths.get(joinTuplesFilePath);
+      Path joinAggregationFile = Paths.get(joinAggregationFilePath);
       try {
-        if (!Files.exists(file)) {
-          Files.createFile(file);
+        if (!Files.exists(joinTuplesFile)) {
+          Files.createFile(joinTuplesFile);
+        }
+
+        if (!Files.exists(joinAggregationFile)) {
+          Files.createFile(joinAggregationFile);
         }
     
-        writer = new BufferedWriter(new FileWriter(absolutePath, true));
+        joinTuplesWriter = new BufferedWriter(new FileWriter(joinTuplesFilePath, true));
+        joinAggregationWriter = new BufferedWriter(new FileWriter(joinAggregationFilePath, true));
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
   }
@@ -60,11 +68,14 @@ public class ResultBolt extends BaseRichBolt {
     // Append a newline character
     sb.append("\n");
     try {
-      writer.write(sb.toString());
-      // Flush to ensure the content is written immediately
-      writer.flush();
+      if (tuple.getSourceStreamId().contains("aggregateStream")){
+        joinAggregationWriter.write(sb.toString());
+        joinAggregationWriter.flush();
+      } else {
+        joinTuplesWriter.write(sb.toString());
+        joinTuplesWriter.flush();
+      }
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
 
