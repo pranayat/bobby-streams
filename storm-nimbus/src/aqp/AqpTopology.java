@@ -19,7 +19,7 @@ public class AqpTopology {
 
         for (Stream stream : schemaConfig.getStreams()) {
             // builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
-            builder.setSpout(stream.getId().concat("_spout"), new DataSpout(stream.getId()), 1);
+            builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
         }
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
@@ -42,11 +42,7 @@ public class AqpTopology {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
 
-            builder.setBolt("joinerFirstStage", new JoinFirstStageBolt()
-                .withWindow(Count.of(100000)), 1)
-                .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
-
-            builder.setBolt("joinerSecondStage", new JoinSecondStageBolt()
+            builder.setBolt("joiner", new JoinerBolt()
                 .withWindow(Count.of(100000)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
@@ -54,14 +50,19 @@ public class AqpTopology {
 
         BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 1);
         BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 1);
-        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt().withWindow(Count.of(100000)), 1);
+        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt(), 1);
 
         for (Query query : schemaConfig.getQueries()) {
-            resultBolt.shuffleGrouping("joinerFirstStage", query.getId() + "_resultStream");
-            noResultBolt.shuffleGrouping("joinerFirstStage", query.getId() + "_noResultStream");
+            resultBolt.allGrouping("joiner", query.getId() + "_resultStream");
+            noResultBolt.allGrouping("joiner", query.getId() + "_noResultStream");
+            resultBolt.allGrouping("aggregator", query.getId() + "_aggregateResultStream");
 
-            aggregationBolt.fieldsGrouping("joinerSecondStage", query.getId() + "_aggregateStream", new Fields("queryId", "clusterId"));
-            resultBolt.fieldsGrouping("aggregator", query.getId() + "_aggregateStream", new Fields("queryId"));
+            Stage aggregationStage = query.getAggregationStage();
+            if (aggregationStage != null) {
+                for (String groupableField : aggregationStage.getGroupableFields()) {
+                    aggregationBolt.fieldsGrouping("joiner", query.getId() + "-groupBy:" + groupableField, new Fields(groupableField));
+                }
+            }
         }
 
         Config conf = new Config();

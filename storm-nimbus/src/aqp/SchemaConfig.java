@@ -156,6 +156,14 @@ class Query implements Serializable {
     public void setStages(List<Stage> stages) {
         this.stages = stages;
     }
+
+    public Stage getAggregationStage() {
+        if (this.stages.size() == 2) {
+            return this.stages.get(1);
+        }
+
+        return null;
+    }
 }
 
 class Stage implements Serializable {
@@ -176,6 +184,15 @@ class Stage implements Serializable {
 
     @JsonProperty("distanceType")
     private String distanceType;
+
+    @JsonProperty("aggregateStream")
+    private String aggregateStream;
+
+    @JsonProperty("aggregatableFields")
+    private List<String> aggregatableFields;
+
+    @JsonProperty("groupableFields")
+    private List<String> groupableFields;    
 
     // Add getters and setters
 
@@ -218,4 +235,16 @@ class Stage implements Serializable {
     public String getDistanceType() {
         return this.distanceType;
     }
+
+    public String getAggregateStream() {
+        return this.aggregateStream;
+    }    
+
+    public List<String> getAggregatableFields() {
+        return this.aggregatableFields;
+    }
+
+    public List<String> getGroupableFields() {
+        return this.groupableFields;
+    }    
 }

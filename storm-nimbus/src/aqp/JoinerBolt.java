@@ -10,17 +10,18 @@ import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class JoinSecondStageBolt extends BaseWindowedBolt {
+public class JoinerBolt extends BaseWindowedBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
 
-    public JoinSecondStageBolt() {
+    public JoinerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -123,70 +124,64 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
 
             for (Tuple tuple : inputWindow.getNew()) {
                 QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-                String tupleClusterId = tuple.getStringByField("clusterId");
                 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-                    String querySumStreamId = joinQuery.getSumStream();
-                    String querySumField = joinQuery.getSumField();
-                    String tupleStreamId = tuple.getStringByField("streamId");
-                    Integer tupleApproxJoinCount = 0;
-                    double tupleApproxJoinSum = 0;
-                    
-                    // find approx join counts/sums  using sketches for tuples completely enclosed by the cell wrt the join query radius (can be replica or non replica)
-                    if (joinQuery.isTupleEnclosedByClusterForQueryRadius(tuple)) {
-                        joinQuery.addToCountSketch(tuple);
-                        if (tupleStreamId.equals(joinQuery.getSumStream())) {
-                            joinQuery.addToSumSketch(tuple);
-                        }
-                        tupleApproxJoinCount = joinQuery.approxJoinCount(tuple);
-                        tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
-                    }
-                    
-                    // for tuples whose join query sphere just intersects this cluster (for replica tuples only) we don't know if they are within join range to other tuples in the cluster so need to find actual join combinations
-                    else if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
-                        // - find join partners in index using join radius r of current query - there should be atleast one non-replica tuple in the join result combination
-                        List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
-                        List<List<Tuple>> validJoinCombinations = new ArrayList<>();
+                    List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
+                    List<List<Tuple>> validJoinCombinations = new ArrayList<>();
 
-                        for (List<Tuple> joinCombination : joinCombinations) {
+                    for (List<Tuple> joinCombination : joinCombinations) {
 
-                            Boolean atleastOneNonReplica = false;
-                            for (Tuple joinPartner : joinCombination) {
+                        Boolean atleastOneNonReplica = false;
+                        for (Tuple joinPartner : joinCombination) {
 
-                                if (!joinPartner.getBooleanByField("isReplica")) {
-                                    atleastOneNonReplica = true;
-                                    break;
-                                }
-                            }
-
-                            if (atleastOneNonReplica) {
-                                validJoinCombinations.add(joinCombination);
+                            if (!joinPartner.getBooleanByField("isReplica")) {
+                                atleastOneNonReplica = true;
+                                break;
                             }
                         }
 
-                        for (List<Tuple> validJoinCombination : validJoinCombinations) {
-                            tupleApproxJoinCount += 1; // increment for this join combination of tuples
-
-                            for (Tuple joinPartner : validJoinCombination) {
-
-                                // will be true once per join combination
-                                if (joinPartner.getStringByField("streamId").equals(querySumStreamId)) {
-                                    tupleApproxJoinSum += joinPartner.getDoubleByField(querySumField);
-                                }
-                            }
+                        if (atleastOneNonReplica) {
+                            validJoinCombinations.add(joinCombination);
                         }
                     }
 
-                    // no point emitting if no join partners found
-                    if (tupleApproxJoinCount > 0) {
-                        List<Object> values = new ArrayList<Object>();
-                        values.add(joinQuery.getId());
-                        values.add(queryGroup.getName());
-                        values.add(tupleClusterId);
-                        values.add(tupleApproxJoinCount);
-                        values.add(tupleApproxJoinSum);
-    
-                        _collector.emit(joinQuery.getId() + "_aggregateStream", tuple, values);
+                    for (List<Tuple> validJoinCombination : validJoinCombinations) {
+
+                        List<String> joinCombinationTupleIds = new ArrayList<String>();
+                        for (Tuple t : validJoinCombination) {
+                            joinCombinationTupleIds.add(t.getStringByField("tupleId"));
+                        }
+                        Collections.sort(joinCombinationTupleIds);
+                        String joinCombinationId = String.join("-", joinCombinationTupleIds);
+
+                        for (Tuple joinPartner : validJoinCombination) {
+                            
+                            Stream joinPartnerStream = this.schemaConfig.getStreamById(joinPartner.getStringByField("streamId"));
+                            List<Object> values = new ArrayList<Object>();
+                            for (Field field : joinPartnerStream.getFields()) {
+                                if (field.getType().equals("double")) {
+                                    values.add(joinPartner.getDoubleByField(field.getName()));
+                                } else {
+                                    values.add(joinPartner.getStringByField(field.getName()));
+                                }
+                            }
+
+                            values.add(joinPartner.getStringByField("streamId"));
+                            values.add(joinCombinationId);
+
+                            // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
+                            // each query has its own result stream
+                            // each join results is anchored by the input tuple that triggered the join 
+                            _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(values.toArray()));
+
+                            // if query has an aggregation stage and tuple belongs to aggregated stream eg.t T1_S1 x T2_S2 x T3_S3 and AVG(S1.velocity) then only T1 emitted from this join combo
+                            // then emit it to different streams, each grouped by a different field
+                            if (joinQuery.getAggregateStream() != null && joinQuery.getAggregateStream().equals(joinPartnerStream.getId())) {
+                                for (String groupableField : joinQuery.getGroupableFields()) {
+                                    _collector.emit(joinQuery.getId() + "-groupBy:" + groupableField, tuple, new Values(values.toArray()));
+                                }
+                            }
+                        }
                     }
                 }
             
@@ -194,25 +189,6 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
             }
         
             deleteExpiredTuplesFromTree(inputWindow.getExpired());
-            
-            // deduct counts and sums from sketches for expired tuples
-            for (Tuple expiredTuple : inputWindow.getExpired()) {
-                QueryGroup queryGroup = getQueryGroupByName(expiredTuple.getStringByField("queryGroupName"));
-                Boolean isReplica = expiredTuple.getBooleanByField("isReplica");
-                String tupleStreamId = expiredTuple.getStringByField("streamId");
-                
-                for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-                    String querySumStreamId = joinQuery.getSumStream();
-
-                    if (!isReplica) {
-                        joinQuery.removeFromCountSketch(expiredTuple);
-                    }
-
-                    if (!isReplica && tupleStreamId.equals(querySumStreamId)) {
-                        joinQuery.removeFromSumSketch(expiredTuple);
-                    }
-                }
-            }
         } catch (Exception e) {
             System.out.println(e);
         }
@@ -221,7 +197,20 @@ public class JoinSecondStageBolt extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Query query : schemaConfig.getQueries()) {
-            declarer.declareStream(query.getId() + "_aggregateStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
+            declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId"));
+            
+            Stream stream = this.schemaConfig.getStreams().get(0);
+            List<String> fields = new ArrayList<String>(stream.getFieldNames());
+            fields.add("streamId");
+            fields.add("joinId");
+            declarer.declareStream(query.getId() + "_resultStream", new Fields(fields));
+
+            Stage aggregationStage = query.getAggregationStage();
+            if (aggregationStage != null) {
+                for (String groupableField : aggregationStage.getGroupableFields()) {
+                    declarer.declareStream(query.getId() + "-groupBy:" + groupableField, new Fields(fields));
+                }
+            }
         }
     }
 }

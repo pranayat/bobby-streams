@@ -23,9 +23,10 @@ public abstract class JoinQueryBuilder {
                     // join stage always comes befor sum stage so joinQuery will have been created here when we go to the else if
                     joinQuery = new JoinQuery(query.getId(), stage.getRadius(), stage.getBetween(), stage.getOn(), distance, iDistance);
                     joinQueries.add(joinQuery);
-                } else if (stage.getType().equals("sum")) {
-                    joinQuery.setSumStream(stage.getOn().get(0).split("\\.")[0]);
-                    joinQuery.setSumField(stage.getOn().get(0).split("\\.")[1]);
+                } else if (stage.getType().equals("avg")) {
+                    joinQuery.setAggregateStream(stage.getAggregateStream());
+                    joinQuery.setAggregatableFields(stage.getAggregatableFields());
+                    joinQuery.setGroupableFields(stage.getGroupableFields());
                 }
             }
         }

@@ -16,10 +16,10 @@ public class JoinQuery {
     IDistance iDistance;
     Panakos panakosSumSketch;
     String sumStream;
-    String sumField;
+    List<String> aggregatableFields;
+    List<String> groupableFields;
+    String aggregateStream;
     Panakos panakosCountSketch;
-    Map<String, Integer> clusterJoinCountMap;
-    Map<String, Double> clusterJoinSumMap;
 
     public JoinQuery(String id, double radius, List<String> streamIds, List<String> fields, Distance distance, IDistance iDistance) {
         Collections.sort(fields);
@@ -32,15 +32,13 @@ public class JoinQuery {
         this.iDistance = iDistance;
         this.panakosCountSketch = new Panakos();
         this.panakosSumSketch = new Panakos();
-        this.clusterJoinCountMap = new HashMap<>();
-        this.clusterJoinSumMap = new HashMap<>();
     }
 
     public void removeFromCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
         String tupleClusterId = tuple.getStringByField("clusterId");
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        this.panakosCountSketch.remove(tupleClusterId + "_" + tupleStreamId, 1);
+        // this.panakosCountSketch.remove(tupleStreamId, 1);
 
     }
 
@@ -48,75 +46,22 @@ public class JoinQuery {
         String tupleClusterId = tuple.getStringByField("clusterId");
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        this.panakosSumSketch.remove(tupleClusterId + "_" + tupleStreamId, tuple.getDoubleByField(this.sumField));
+        // this.panakosSumSketch.remove(tupleStreamId, tuple.getDoubleByField(this.sumField));
     }
 
-    public void addToCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
+    public void addToCountSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        // count_min(C1_S1) ++
-        // count_min(C1_S1) ++
-        this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId, 1);
+        this.panakosCountSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getDoubleByField(groupByField), 1); // TODO group by field can be other types
     }
 
-    public void addToSumSketch(Tuple tuple) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
+    public void addToSumSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
+        String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
-        // count_min_sum(C1_S1) += S1.velocity for query SUM(S1.velocity)
-        this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId, tuple.getDoubleByField(this.sumField));
-    }
-
-    public Integer approxJoinCount(Tuple tuple) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
-        String tupleStreamId = tuple.getStringByField("streamId");
-
-        // query1 = JOIN(S1 x S2 x S3)
-        // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3)
-        // so for incoming tuple T1_S1 in cell C1, joining with streams S2 and S3 - join_count = count_min(C1_S2) x count_min(C2_S3)
-        Integer tupleApproxJoinCount = 1;
-        for (String streamId : this.streamIds) {
-            // join this tuple with other streams in this cell
-            if (!streamId.equals(tupleStreamId)) {
-                tupleApproxJoinCount *= this.panakosCountSketch.query(tupleClusterId + "_" + streamId);
-            }
-        }
-
-        return tupleApproxJoinCount;
-    }
-
-    public Double approxJoinSum(Tuple tuple, Integer tupleApproxJoinCount) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
-        double tupleApproxJoinSum = 0;
-
-        // no point computing sum if no join tuples
-        if (tupleApproxJoinCount != 0 && this.panakosCountSketch.query(tupleClusterId + "_" + this.sumStream) != 0) {
-            // query1 = SUM(S1.value)
-            // join_sum_C1_query1 = [ join_count_C1_query1 / count_min(C1_S1) ] x count_min_sum(C1_S1)
-            tupleApproxJoinSum = (tupleApproxJoinCount / this.panakosCountSketch.query(tupleClusterId + "_" + this.sumStream))
-                    * this.panakosSumSketch.query(tupleClusterId + "_" + this.sumStream);
-        }
-        
-        return tupleApproxJoinSum;
+        this.panakosSumSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getDoubleByField(groupByField), tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
     }
     
-    public Integer aggregateJoinCounts() {
-        return this.clusterJoinCountMap.values().stream().mapToInt(Integer::intValue).sum();
-    }
-
-    public Double aggregateJoinSums() {
-        return this.clusterJoinSumMap.values().stream().mapToDouble(Double::doubleValue).sum();
-    }
-
-    public Map<String, Integer> getClusterJoinCountMap() {
-        return this.clusterJoinCountMap;
-    }
-
-    public Map<String, Double> getClusterJoinSumMap() {
-        return this.clusterJoinSumMap;
-    }    
-
     public Panakos getPanakosCountSketch() {
         return this.panakosCountSketch;
     }
@@ -125,21 +70,29 @@ public class JoinQuery {
         return this.panakosSumSketch;
     }
     
-    public void setSumStream(String sumStream) {
-        this.sumStream = sumStream;
+    public void setAggregateStream(String aggregateStream) {
+        this.aggregateStream = aggregateStream;
     }
 
-    public void setSumField(String sumField) {
-        this.sumField = sumField;
+    public void setAggregatableFields(List<String> aggregatableFields) {
+        this.aggregatableFields = aggregatableFields;
     }
 
-    public String getSumStream() {
-        return this.sumStream;
+    public void setGroupableFields(List<String> groupableFields) {
+        this.groupableFields = groupableFields;
     }
 
-    public String getSumField() {
-        return this.sumField;
+    public String getAggregateStream() {
+        return this.aggregateStream;
     }
+
+    public List<String> getAggregatableFields() {
+        return this.aggregatableFields;
+    }
+
+    public List<String> getGroupableFields() {
+        return this.groupableFields;
+    }    
 
     public String getId() {
         return this.id;

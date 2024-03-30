@@ -18,6 +18,10 @@
         {
           "name": "velocity",
           "type": "double"
+        },
+        {
+          "name": "time",
+          "type": "double"
         }
       ]
     },
@@ -39,7 +43,11 @@
         {
           "name": "velocity",
           "type": "double"
-        }
+        },
+        {
+          "name": "time",
+          "type": "double"
+        }        
       ]
     },
     {
@@ -60,7 +68,11 @@
         {
           "name": "velocity",
           "type": "double"
-        }
+        },
+        {
+          "name": "time",
+          "type": "double"
+        }        
       ]
     }
   ],
@@ -75,7 +87,8 @@
           "type": "join",
           "between": [
             "stream_1",
-            "stream_2"
+            "stream_2",
+            "stream_3"
           ],
           "on": [
             "lat",
@@ -85,12 +98,12 @@
           "distanceType": "euclidean"
         },
         {
-          "type": "sum",
-          "on": [
-            "stream_2.velocity"
-          ]
+          "type": "avg",
+          "aggregateStream": "stream_1",
+          "aggregatableFields" : ["velocity"],
+          "groupableFields" : ["time"]
         }
       ]
-    }    
+    }
   ]
 }
