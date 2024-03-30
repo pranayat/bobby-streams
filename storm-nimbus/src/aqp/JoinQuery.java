@@ -34,32 +34,30 @@ public class JoinQuery {
         this.panakosSumSketch = new Panakos();
     }
 
-    public void removeFromCountSketch(Tuple tuple) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
+    public void removeFromCountSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        // this.panakosCountSketch.remove(tupleStreamId, 1);
-
+        this.panakosCountSketch.remove(tupleStreamId + "." + groupByField + "=" + tuple.getStringByField(groupByField), 1); // TODO group by field can be other types
     }
 
-    public void removeFromSumSketch(Tuple tuple) throws NoSuchAlgorithmException {
-        String tupleClusterId = tuple.getStringByField("clusterId");
+    public void removeFromSumSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
+        String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
-        // this.panakosSumSketch.remove(tupleStreamId, tuple.getDoubleByField(this.sumField));
+        this.panakosSumSketch.remove(tupleStreamId + "." + groupByField + "=" + tuple.getStringByField(groupByField), tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
     }
 
     public void addToCountSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
 
-        this.panakosCountSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getDoubleByField(groupByField), 1); // TODO group by field can be other types
+        this.panakosCountSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getStringByField(groupByField), 1); // TODO group by field can be other types
     }
 
     public void addToSumSketch(Tuple tuple, String groupByField) throws NoSuchAlgorithmException {
         String tupleStreamId = tuple.getStringByField("streamId");
         String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
-        this.panakosSumSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getDoubleByField(groupByField), tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
+        this.panakosSumSketch.add(tupleStreamId + "." + groupByField + "=" + tuple.getStringByField(groupByField), tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
     }
     
     public Panakos getPanakosCountSketch() {

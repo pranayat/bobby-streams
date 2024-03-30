@@ -18,8 +18,8 @@ public class AqpTopology {
         TopologyBuilder builder = new TopologyBuilder();
 
         for (Stream stream : schemaConfig.getStreams()) {
-            // builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
-            builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
+            builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+            // builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
         }
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
@@ -43,7 +43,7 @@ public class AqpTopology {
             }
 
             builder.setBolt("joiner", new JoinerBolt()
-                .withWindow(Count.of(100000)), 1)
+                .withWindow(Count.of(100)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
         }
@@ -53,8 +53,8 @@ public class AqpTopology {
         BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt(), 1);
 
         for (Query query : schemaConfig.getQueries()) {
-            resultBolt.allGrouping("joiner", query.getId() + "_resultStream");
-            noResultBolt.allGrouping("joiner", query.getId() + "_noResultStream");
+            resultBolt.allGrouping("joiner", query.getId() + "_joinResultStream");
+            noResultBolt.allGrouping("joiner", query.getId() + "_noJoinResultStream");
             resultBolt.allGrouping("aggregator", query.getId() + "_aggregateResultStream");
 
             Stage aggregationStage = query.getAggregationStage();

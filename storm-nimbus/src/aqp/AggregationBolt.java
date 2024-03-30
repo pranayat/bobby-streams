@@ -58,40 +58,33 @@ public class AggregationBolt extends BaseRichBolt {
             String joinQueryId = extractJoinQueryId(tuple.getSourceStreamId());
             String groupByField = extractGroupByField(tuple.getSourceStreamId());
             JoinQuery joinQuery = getJoinQueryById(joinQueryId);
+            Boolean isExpired = tuple.getBooleanByField("isExpired");
 
-            // we know all tuples with the same value for the groupByField will end up in this joiner
-            joinQuery.addToCountSketch(tuple, groupByField);
-            joinQuery.addToSumSketch(tuple, groupByField);
-            
-            double count = joinQuery.getPanakosCountSketch().query("stream_1.time=2100.0");
-            double sum = joinQuery.getPanakosSumSketch().query("stream_1.time=2100.0");
-            double avg = sum / count;
-            // Double joinAvg = 0.0;
+            // all tuples with the same value for the groupByField will end up in this joiner
+            if (isExpired) {
+              joinQuery.removeFromCountSketch(tuple, groupByField);
+              joinQuery.removeFromSumSketch(tuple, groupByField);
+            } else {
+              joinQuery.addToCountSketch(tuple, groupByField);
+              joinQuery.addToSumSketch(tuple, groupByField);
 
-            // if (joinCount != 0) {
-            //   joinAvg = joinSum / joinCount;
-            // }
-
-            List<Object> values = new ArrayList<Object>();
-            values.add(joinQuery.getId());
-            values.add("stream_1.time=2100.0");
-            values.add(count);
-            values.add(sum);
-            values.add(avg);
-
-            _collector.emit(joinQuery.getId() + "_aggregateResultStream", tuple, values);
-
-            // for (Tuple expiredTuple : inputWindow.getExpired()) {
-            //   // deduct expired counts and sums
-            //   String clusterId = expiredTuple.getStringByField("clusterId");
-            //   Integer tupleApproxJoinCount = expiredTuple.getIntegerByField("tupleApproxJoinCount");
-            //   Double tupleApproxJoinSum = expiredTuple.getDoubleByField("tupleApproxJoinSum");
-            //   String joinQueryId = expiredTuple.getStringByField("queryId");
-            //   JoinQuery joinQuery = getJoinQueryById(joinQueryId);
-
-            //   joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) - tupleApproxJoinCount);
-            //   joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) - tupleApproxJoinSum);
-            // }
+              double count = joinQuery.getPanakosCountSketch().query("stream_1.time=1563836400");
+              double sum = joinQuery.getPanakosSumSketch().query("stream_1.time=1563836400");
+              double avg = 0.0;
+  
+              if (count != 0) {
+                avg = sum / count;
+              }
+  
+              List<Object> values = new ArrayList<Object>();
+              values.add(joinQuery.getId());
+              values.add("stream_1.time=1563836400");
+              values.add(count);
+              values.add(sum);
+              values.add(avg);
+  
+              _collector.emit(joinQuery.getId() + "_aggregateResultStream", tuple, values);
+            }
         } catch (Exception e) {
               e.printStackTrace(System.out);
         }

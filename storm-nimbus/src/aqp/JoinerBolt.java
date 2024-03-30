@@ -96,6 +96,31 @@ public class JoinerBolt extends BaseWindowedBolt {
         }
     }
     
+    private String buildJoinCombinationId(List<Tuple> joinCombination) {
+        List<String> joinCombinationTupleIds = new ArrayList<String>();
+        for (Tuple t : joinCombination) {
+            joinCombinationTupleIds.add(t.getStringByField("tupleId"));
+        }
+        Collections.sort(joinCombinationTupleIds);
+
+        return String.join("-", joinCombinationTupleIds);
+    }
+
+    private List<Object> populateTupleValues(Tuple tuple) {
+        Stream joinPartnerStream = this.schemaConfig.getStreamById(tuple.getStringByField("streamId"));
+        List<Object> values = new ArrayList<Object>();
+        for (Field field : joinPartnerStream.getFields()) {
+            if (field.getType().equals("double")) {
+                values.add(tuple.getDoubleByField(field.getName()));
+            } else {
+                values.add(tuple.getStringByField(field.getName()));
+            }
+        }
+
+        return values;
+    }
+
+
     @Override
     public void execute(TupleWindow inputWindow) {
 
@@ -147,36 +172,23 @@ public class JoinerBolt extends BaseWindowedBolt {
 
                     for (List<Tuple> validJoinCombination : validJoinCombinations) {
 
-                        List<String> joinCombinationTupleIds = new ArrayList<String>();
-                        for (Tuple t : validJoinCombination) {
-                            joinCombinationTupleIds.add(t.getStringByField("tupleId"));
-                        }
-                        Collections.sort(joinCombinationTupleIds);
-                        String joinCombinationId = String.join("-", joinCombinationTupleIds);
+                        String joinCombinationId = buildJoinCombinationId(validJoinCombination);
 
                         for (Tuple joinPartner : validJoinCombination) {
-                            
-                            Stream joinPartnerStream = this.schemaConfig.getStreamById(joinPartner.getStringByField("streamId"));
-                            List<Object> values = new ArrayList<Object>();
-                            for (Field field : joinPartnerStream.getFields()) {
-                                if (field.getType().equals("double")) {
-                                    values.add(joinPartner.getDoubleByField(field.getName()));
-                                } else {
-                                    values.add(joinPartner.getStringByField(field.getName()));
-                                }
-                            }
+                            List<Object> values = populateTupleValues(joinPartner);
 
                             values.add(joinPartner.getStringByField("streamId"));
                             values.add(joinCombinationId);
+                            values.add(false);
 
                             // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
                             // each query has its own result stream
                             // each join results is anchored by the input tuple that triggered the join 
-                            _collector.emit(joinQuery.getId() + "_resultStream", tuple, new Values(values.toArray()));
+                            _collector.emit(joinQuery.getId() + "_joinResultStream", tuple, new Values(values.toArray()));
 
                             // if query has an aggregation stage and tuple belongs to aggregated stream eg.t T1_S1 x T2_S2 x T3_S3 and AVG(S1.velocity) then only T1 emitted from this join combo
                             // then emit it to different streams, each grouped by a different field
-                            if (joinQuery.getAggregateStream() != null && joinQuery.getAggregateStream().equals(joinPartnerStream.getId())) {
+                            if (joinQuery.getAggregateStream() != null && joinQuery.getAggregateStream().equals(joinPartner.getStringByField("streamId"))) {
                                 for (String groupableField : joinQuery.getGroupableFields()) {
                                     _collector.emit(joinQuery.getId() + "-groupBy:" + groupableField, tuple, new Values(values.toArray()));
                                 }
@@ -189,6 +201,57 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
         
             deleteExpiredTuplesFromTree(inputWindow.getExpired());
+
+            for (Tuple expiredTuple : inputWindow.getExpired()) {
+                QueryGroup queryGroup = getQueryGroupByName(expiredTuple.getStringByField("queryGroupName"));
+                
+                for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+                    List<List<Tuple>> joinCombinations = joinQuery.execute(expiredTuple, queryGroup, true, null, null);
+                    List<List<Tuple>> validJoinCombinations = new ArrayList<>();
+
+                    for (List<Tuple> joinCombination : joinCombinations) {
+
+                        Boolean atleastOneNonReplica = false;
+                        for (Tuple joinPartner : joinCombination) {
+
+                            if (!joinPartner.getBooleanByField("isReplica")) {
+                                atleastOneNonReplica = true;
+                                break;
+                            }
+                        }
+
+                        if (atleastOneNonReplica) {
+                            validJoinCombinations.add(joinCombination);
+                        }
+                    }
+
+                    for (List<Tuple> validJoinCombination : validJoinCombinations) {
+
+                        String joinCombinationId = buildJoinCombinationId(validJoinCombination);
+
+                        for (Tuple joinPartner : validJoinCombination) {
+                            List<Object> values = populateTupleValues(joinPartner);
+
+                            values.add(joinPartner.getStringByField("streamId"));
+                            values.add(joinCombinationId);
+                            values.add(true);
+
+                            // emit a tuple in a join combintaion T1_S1 - T2_S2 - T3_S3
+                            // each query has its own result stream
+                            // each join results is anchored by the input tuple that triggered the join 
+                            _collector.emit(joinQuery.getId() + "_joinResultStream", expiredTuple, new Values(values.toArray()));
+
+                            // if query has an aggregation stage and tuple belongs to aggregated stream eg.t T1_S1 x T2_S2 x T3_S3 and AVG(S1.velocity) then only T1 emitted from this join combo
+                            // then emit it to different streams, each grouped by a different field
+                            if (joinQuery.getAggregateStream() != null && joinQuery.getAggregateStream().equals(joinPartner.getStringByField("streamId"))) {
+                                for (String groupableField : joinQuery.getGroupableFields()) {
+                                    _collector.emit(joinQuery.getId() + "-groupBy:" + groupableField, expiredTuple, new Values(values.toArray()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }            
         } catch (Exception e) {
             System.out.println(e);
         }
@@ -197,13 +260,14 @@ public class JoinerBolt extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Query query : schemaConfig.getQueries()) {
-            declarer.declareStream(query.getId() + "_noResultStream", new Fields("queryId"));
+            declarer.declareStream(query.getId() + "_noJoinResultStream", new Fields("queryId"));
             
             Stream stream = this.schemaConfig.getStreams().get(0);
             List<String> fields = new ArrayList<String>(stream.getFieldNames());
             fields.add("streamId");
             fields.add("joinId");
-            declarer.declareStream(query.getId() + "_resultStream", new Fields(fields));
+            fields.add("isExpired");
+            declarer.declareStream(query.getId() + "_joinResultStream", new Fields(fields));
 
             Stage aggregationStage = query.getAggregationStage();
             if (aggregationStage != null) {

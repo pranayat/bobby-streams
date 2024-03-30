@@ -21,7 +21,7 @@
         },
         {
           "name": "time",
-          "type": "double"
+          "type": "string"
         }
       ]
     },
@@ -46,7 +46,7 @@
         },
         {
           "name": "time",
-          "type": "double"
+          "type": "string"
         }        
       ]
     },
@@ -71,7 +71,7 @@
         },
         {
           "name": "time",
-          "type": "double"
+          "type": "string"
         }        
       ]
     }
