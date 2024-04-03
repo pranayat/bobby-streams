@@ -50,16 +50,16 @@ public class AggregationBolt extends BaseWindowedBolt {
         try {
             for (Tuple tuple : inputWindow.getNew()) {
                 String clusterId = tuple.getStringByField("clusterId");
-                Integer tupleApproxJoinCount = tuple.getIntegerByField("tupleApproxJoinCount");
+                Double tupleApproxJoinCount = tuple.getDoubleByField("tupleApproxJoinCount");
                 Double tupleApproxJoinSum = tuple.getDoubleByField("tupleApproxJoinSum");
                 String joinQueryId = tuple.getStringByField("queryId");
                 JoinQuery joinQuery = getJoinQueryById(joinQueryId);
 
-                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) + tupleApproxJoinCount);
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0.0) + tupleApproxJoinCount);
                 joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) + tupleApproxJoinSum);
 
                 // aggregate counts and sums across clusters
-                Integer joinCount = joinQuery.aggregateJoinCounts();
+                Double joinCount = joinQuery.aggregateJoinCounts();
                 Double joinSum = joinQuery.aggregateJoinSums();
                 Double joinAvg = 0.0;
 
@@ -84,7 +84,7 @@ public class AggregationBolt extends BaseWindowedBolt {
                 String joinQueryId = expiredTuple.getStringByField("queryId");
                 JoinQuery joinQuery = getJoinQueryById(joinQueryId);
 
-                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0) - tupleApproxJoinCount);
+                joinQuery.getClusterJoinCountMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinCountMap()).map(map -> map.get(clusterId)).orElse(0.0) - tupleApproxJoinCount);
                 joinQuery.getClusterJoinSumMap().put(clusterId, Optional.ofNullable(joinQuery.getClusterJoinSumMap()).map(map -> map.get(clusterId)).orElse(0.0) - tupleApproxJoinSum);
               }
         } catch (Exception e) {

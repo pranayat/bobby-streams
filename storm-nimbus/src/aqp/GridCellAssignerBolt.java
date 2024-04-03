@@ -111,7 +111,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
     }
 
     private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
-      return 0.5;
+      return 0.2;
     }
 
     @Override

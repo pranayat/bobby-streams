@@ -19,7 +19,7 @@ public class JoinQuery {
     String aggregateStream;
     Panakos panakosCountSketch;
 
-    Map<String, Integer> clusterJoinCountMap;
+    Map<String, Double> clusterJoinCountMap;
     Map<String, Double> clusterJoinSumMap;
 
 
@@ -64,7 +64,7 @@ public class JoinQuery {
 
     /////////////////////////////////////////
     public Double extractVolumeRatio(Tuple tuple) {
-        return 0.5;
+        return 0.2;
     }
 
     public void removeFromCountSketch(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
@@ -89,6 +89,10 @@ public class JoinQuery {
         // count_min(C1_S1) ++
         // count_min(C1_S1) ++
         this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId, volumeRatio); // TOOD add where clause
+
+        if (volumeRatio != 1.0) {
+            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_intersect", volumeRatio);
+        }
     }
 
     public void addToSumSketch(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
@@ -98,16 +102,20 @@ public class JoinQuery {
 
         // count_min_sum(C1_S1) += S1.velocity for query SUM(S1.velocity)
         this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId, volumeRatio * tuple.getDoubleByField(aggregateField));
+
+        if (volumeRatio != 1.0) {
+            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_intersect", volumeRatio * tuple.getDoubleByField(aggregateField));
+        }
     }
 
-    public Integer approxJoinCount(Tuple tuple) throws NoSuchAlgorithmException {
+    public Double approxJoinCount(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
         String tupleClusterId = tuple.getStringByField("clusterId");
         String tupleStreamId = tuple.getStringByField("streamId");
 
         // query1 = JOIN(S1 x S2 x S3)
         // join_count_C1_query1 = count_min(C1_S1) x count_min(C1_S2) x count_min(C1_S3)
         // so for incoming tuple T1_S1 in cell C1, joining with streams S2 and S3 - join_count = count_min(C1_S2) x count_min(C2_S3)
-        Integer tupleApproxJoinCount = 1;
+        Double tupleApproxJoinCount = volumeRatio;
         for (String streamId : this.streamIds) {
             // join this tuple with other streams in this cell
             if (!streamId.equals(tupleStreamId)) {
@@ -118,7 +126,7 @@ public class JoinQuery {
         return tupleApproxJoinCount;
     }
 
-    public Double approxJoinSum(Tuple tuple, Integer tupleApproxJoinCount) throws NoSuchAlgorithmException {
+    public Double approxJoinSum(Tuple tuple, Double tupleApproxJoinCount) throws NoSuchAlgorithmException {
         String tupleClusterId = tuple.getStringByField("clusterId");
         double tupleApproxJoinSum = 0;
 
@@ -133,15 +141,15 @@ public class JoinQuery {
         return tupleApproxJoinSum;
     }
     
-    public Integer aggregateJoinCounts() {
-        return this.clusterJoinCountMap.values().stream().mapToInt(Integer::intValue).sum();
+    public Double aggregateJoinCounts() {
+        return this.clusterJoinCountMap.values().stream().mapToDouble(Double::doubleValue).sum();
     }
 
     public Double aggregateJoinSums() {
         return this.clusterJoinSumMap.values().stream().mapToDouble(Double::doubleValue).sum();
     }
 
-    public Map<String, Integer> getClusterJoinCountMap() {
+    public Map<String, Double> getClusterJoinCountMap() {
         return this.clusterJoinCountMap;
     }
 
