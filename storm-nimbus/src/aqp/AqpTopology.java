@@ -18,8 +18,8 @@ public class AqpTopology {
         TopologyBuilder builder = new TopologyBuilder();
 
         for (Stream stream : schemaConfig.getStreams()) {
-            builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
-            // builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
+            // builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+            builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
         }
 
         if (schemaConfig.getClustering().getType().equals("k-means")) {
@@ -31,7 +31,7 @@ public class AqpTopology {
             // for (Stream stream : schemaConfig.getStreams()) {
             //     kMeansClusterAssignerBolt.allGrouping(stream.getId().concat("_spout"));
             // }
-            // builder.setBolt("joiner", new JoinerBolt()
+            // builder.setBolt("joiner", new JoinerBoltV2()
             // .withWindow(Count.of(1000)), 2)
             // .partialKeyGrouping("kMeansClusterAssigner", new Fields("clusterId", "queryGroupName"));
 
@@ -42,26 +42,27 @@ public class AqpTopology {
                 gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
             }
 
+            // builder.setBolt("joiner", new JoinerBoltV2()
             builder.setBolt("joiner", new JoinerBolt()
-                .withWindow(Count.of(100)), 1)
+                .withWindow(Count.of(10000)), 1)
                 .fieldsGrouping("gridCellAssigner", new Fields("clusterId", "queryGroupName"));
 
         }
 
         BoltDeclarer resultBolt = builder.setBolt("result", new ResultBolt(), 1);
-        BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 1);
-        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt(), 1);
+        // BoltDeclarer noResultBolt = builder.setBolt("noResult", new NoResultBolt(), 1);
+        // BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBoltV2(), 1);
+        BoltDeclarer aggregationBolt = builder.setBolt("aggregator", new AggregationBolt().withWindow(Count.of(10000)), 1);
 
         for (Query query : schemaConfig.getQueries()) {
-            resultBolt.allGrouping("joiner", query.getId() + "_joinResultStream");
-            noResultBolt.allGrouping("joiner", query.getId() + "_noJoinResultStream");
-            resultBolt.allGrouping("aggregator", query.getId() + "_aggregateResultStream");
+            // resultBolt.allGrouping("joiner", query.getId() + "-joinResultStream");
+            // noResultBolt.allGrouping("joiner", query.getId() + "-noJoinResultStream");
+            resultBolt.allGrouping("aggregator", query.getId() + "-aggregateResultStream");
 
             Stage aggregationStage = query.getAggregationStage();
             if (aggregationStage != null) {
-                for (String groupableField : aggregationStage.getGroupableFields()) {
-                    aggregationBolt.fieldsGrouping("joiner", query.getId() + "-groupBy:" + groupableField, new Fields(groupableField));
-                }
+                // aggregationBolt.allGrouping("joiner", query.getId() + "-forAggregationStream");
+                aggregationBolt.allGrouping("joiner", query.getId() + "-forAggregationStream");
             }
         }
 

@@ -26,7 +26,6 @@ public abstract class JoinQueryBuilder {
                 } else if (stage.getType().equals("avg")) {
                     joinQuery.setAggregateStream(stage.getAggregateStream());
                     joinQuery.setAggregatableFields(stage.getAggregatableFields());
-                    joinQuery.setGroupableFields(stage.getGroupableFields());
                 }
             }
         }

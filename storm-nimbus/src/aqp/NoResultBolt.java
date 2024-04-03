@@ -9,7 +9,7 @@ public class NoResultBolt extends BaseBasicBolt {
 
   @Override
   public void execute(Tuple tuple, BasicOutputCollector collector) {
-      // this bolt is only for acking unjoined tuples from JoinerBolt
+      // this bolt is only for acking unjoined tuples from JoinerBoltV2
   }
 
   @Override

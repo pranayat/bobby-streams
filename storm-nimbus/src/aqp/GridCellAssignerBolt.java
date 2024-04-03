@@ -110,6 +110,10 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       return minDistance < joinRange;
     }
 
+    private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
+      return 0.5;
+    }
+
     @Override
     public void execute(Tuple input) {
         String tupleStreamId = input.getStringByField("streamId");
@@ -150,11 +154,13 @@ public class GridCellAssignerBolt extends BaseRichBolt {
                   List<List<Double>> corners = getTargetCellCorners(targetCell, queryGroup.cellLength);
                   String enclosedBy = "enclosedBy:"; // eg. enclosedBy:,query1,query2 ie. wrt to query1 and query2 radii, this cell is completely enclosed
                   String intersectedBy = "intersectedBy:";
+                  Double volumeRatio = 1.0;
                   for (JoinQuery joinQuery : queryGroup.joinQueries) {
                     if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
                       enclosedBy += "," + joinQuery.getId();
                     } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
-                      intersectedBy += "," + joinQuery.getId();
+                      volumeRatio = getIntersectionVolumeRatio(tupleCoordinates, corners, joinQuery.radius);
+                      intersectedBy += "," + joinQuery.getId() + ":ratio=" + volumeRatio;
                     }
                   }
 

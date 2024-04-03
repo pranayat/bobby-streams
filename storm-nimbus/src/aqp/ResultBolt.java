@@ -68,7 +68,7 @@ public class ResultBolt extends BaseRichBolt {
     // Append a newline character
     sb.append("\n");
     try {
-      if (tuple.getSourceStreamId().contains("_aggregateResultStream")){
+      if (tuple.getSourceStreamId().contains("-aggregateResultStream")){
         joinAggregationWriter.write(sb.toString());
         joinAggregationWriter.flush();
       } else {

@@ -191,11 +191,6 @@ class Stage implements Serializable {
     @JsonProperty("aggregatableFields")
     private List<String> aggregatableFields;
 
-    @JsonProperty("groupableFields")
-    private List<String> groupableFields;    
-
-    // Add getters and setters
-
     public String getType() {
         return type;
     }
@@ -243,8 +238,4 @@ class Stage implements Serializable {
     public List<String> getAggregatableFields() {
         return this.aggregatableFields;
     }
-
-    public List<String> getGroupableFields() {
-        return this.groupableFields;
-    }    
 }
