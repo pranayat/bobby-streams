@@ -73,6 +73,9 @@ public class JoinQuery {
 
         this.panakosCountSketch.remove(tupleClusterId + "_" + tupleStreamId, volumeRatio);
 
+        if (tuple.getBooleanByField("isReplica")) {
+            this.panakosSumSketch.remove(tupleClusterId + "_" + tupleStreamId + "_replica", volumeRatio);
+        }
     }
 
     public void removeFromSumSketch(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
@@ -81,6 +84,10 @@ public class JoinQuery {
         String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
         this.panakosSumSketch.remove(tupleClusterId + "_" + tupleStreamId, volumeRatio * tuple.getDoubleByField(aggregateField));
+
+        if (tuple.getBooleanByField("isReplica")) {
+            this.panakosSumSketch.remove(tupleClusterId + "_" + tupleStreamId + "_replica", volumeRatio * tuple.getDoubleByField(aggregateField));
+        }
     }
 
     public void addToCountSketch(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
@@ -90,8 +97,8 @@ public class JoinQuery {
         // count_min(C1_S1) ++
         this.panakosCountSketch.add(tupleClusterId + "_" + tupleStreamId, volumeRatio); // TOOD add where clause
 
-        if (volumeRatio != 1.0) {
-            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_intersect", volumeRatio);
+        if (tuple.getBooleanByField("isReplica")) {
+            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_replica", volumeRatio);
         }
     }
 
@@ -103,8 +110,8 @@ public class JoinQuery {
         // count_min_sum(C1_S1) += S1.velocity for query SUM(S1.velocity)
         this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId, volumeRatio * tuple.getDoubleByField(aggregateField));
 
-        if (volumeRatio != 1.0) {
-            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_intersect", volumeRatio * tuple.getDoubleByField(aggregateField));
+        if (tuple.getBooleanByField("isReplica")) {
+            this.panakosSumSketch.add(tupleClusterId + "_" + tupleStreamId + "_replica", volumeRatio * tuple.getDoubleByField(aggregateField));
         }
     }
 
@@ -121,6 +128,19 @@ public class JoinQuery {
             if (!streamId.equals(tupleStreamId)) {
                 tupleApproxJoinCount *= this.panakosCountSketch.query(tupleClusterId + "_" + streamId);
             }
+        }
+
+        // if incoming tuple is replica remove join combinations where all tuples are replicas
+        if (tuple.getBooleanByField("isReplica")) {
+            Double allReplicaCombinationCount = 1.0;
+            for (String streamId : this.streamIds) {
+                // join this tuple with other streams in this cell
+                if (!streamId.equals(tupleStreamId)) {
+                    allReplicaCombinationCount *= this.panakosCountSketch.query(tupleClusterId + "_" + streamId + "_replica");
+                }
+            }
+
+            tupleApproxJoinCount -= allReplicaCombinationCount;
         }
 
         return tupleApproxJoinCount;

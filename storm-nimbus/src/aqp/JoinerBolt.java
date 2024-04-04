@@ -98,21 +98,19 @@ public class JoinerBolt extends BaseWindowedBolt {
                     //     continue;
                     // }
 
-
-                    Double tupleApproxJoinCount = 0.0;
-                    double tupleApproxJoinSum = 0;
                     
                     Double volumeRatio = 1.0; // should be by default 1.0 for enclosed tuples
                     if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
                         volumeRatio = joinQuery.extractVolumeRatio(tuple);
                     }
-
+                    
                     joinQuery.addToCountSketch(tuple, volumeRatio);
                     if (tupleStreamId.equals(joinQuery.getAggregateStream())) {
                         joinQuery.addToSumSketch(tuple, volumeRatio);
                     }
-                    tupleApproxJoinCount = joinQuery.approxJoinCount(tuple, volumeRatio);
-                    tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
+
+                    Double tupleApproxJoinCount = joinQuery.approxJoinCount(tuple, volumeRatio);
+                    double tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
 
                     // no point emitting if no join partners found
                     if (tupleApproxJoinCount > 0) {
