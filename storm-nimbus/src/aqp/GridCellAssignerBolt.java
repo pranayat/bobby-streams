@@ -150,44 +150,18 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       return xi;
   }
 
-    private Double getIntersectionVolumeRatio_2D(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
-      
-      Double xMin = findMinimumNthCoordinate(corners, 0);
-      Double xMax = findMaximumNthCoordinate(corners, 0);
-      Double yMin = findMinimumNthCoordinate(corners, 1);
-      Double yMax = findMaximumNthCoordinate(corners, 1);
+    private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
+      Integer dimensionality = tupleCoordinates.size();
 
-      List<List<Double>> validIntersections = new ArrayList<>();
-      Double x, y;
+      // get max and min values of the grid coordinates in each dimension
+      List<Double> maxesByDimension = getMaxesByDimension(corners); // [x_max, y_max, z_max]
+      List<Double> minsByDimension = getMinsByDimension(corners); // [x_min, y_min, z_min]
 
-      Double volume = 1.0;
+      List<List<Double>> intersectionPoints = findSphereCubeIntersectionPoints();
+      List<Integer> fixedDimensions = findFixedDimensions(intersectionPoints); // eg. [0] if only x is fixed, [] if none are fixed (corner approach)
+      List<Integer> freeDimensions = findFreeDimensions(fixedDimensions, dimensionality); // eg. [1, 3, 4]
 
-      // there can be max 2 intersection points with a square if the circle is outside the square
-      // left - (x_min, y)
-      y = findXi(tupleCoordinates, joinRange, Arrays.asList(xMin, null), 1);
-      if (y >= yMin && y <= yMax) {
-        volume *= y - yMin;
-      }
-
-      // bottom - (x, y_min)
-      x = findXi(tupleCoordinates, joinRange, Arrays.asList(null, yMin), 0);
-      if (x >= xMin && x <= xMax) {
-        volume *= x - xMin;
-      }
-
-      // right - (x_max, y)
-      y = findXi(tupleCoordinates, joinRange, Arrays.asList(xMax, null), 1);
-      if (y >= yMin && y <= yMax) {
-        volume *= y - yMin;
-      }
-
-      // top - (x, y_max)
-      x = findXi(tupleCoordinates, joinRange, Arrays.asList(null, yMax), 0);
-      if (x >= xMin && x <= xMax) {
-        volume *= x - xMin;
-      }
-
-      
+      for ()
     }
 
     @Override
