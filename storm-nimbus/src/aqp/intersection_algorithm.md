@@ -97,8 +97,6 @@
 
     ##
 
-
-## Algorithm
 ## Observations
   - For 'n' dimensions, we can have maximum 'n-1' degrees of freedom, ie. we can atmost have coordinates of n-1 dimensions be at max/min
     and the coordinates of the remaining dimensions are free to move between max and min
@@ -106,3 +104,14 @@
   - For the remaining coordinates that are free to move between max and min, we can have different intersection approaches based on the position of the sphere
     - if the sphere's coordinate for this dimension > dimension_max, then volume contribution = dimension_max - min(all coordinates in this dimension)
     - if the sphere's coordinate for this dimension < dimension_min, then volume contribution = max(all coordinates in this dimension) - dimension_min
+
+## Algorithm
+- Find intersection points of the sphere with the cube
+- Classify the intersection as CORNER, EDGE, FACE ... depending on whether 0, 1, 2 ... dimensions have coordinates which are all max/min
+- For the coordinates in the remaining dimensions which are not at max/min
+  - check of sphere's coordinate in that dimension is > or < these coordinates
+  - do this for all combinations of max and min with each of these dimensions
+- For dimensions at max/min volumen contribution a (dim_max - dim_min)
+- For other dimensions
+  - if sphere's coordinate in this dimension is > dim_max, volume contribution = dim_max - min(all coordinates in this dimension)
+  - if sphere's coordinate in this dimension is < dim_min, volume contribution = max(all coordinates in this dimension) - dim_min
