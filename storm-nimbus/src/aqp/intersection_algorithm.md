@@ -71,3 +71,13 @@
     ##
 
     ##
+
+
+## Algorithm
+## Observations
+  - For 'n' dimensions, we can have maximum 'n-1' degrees of freedom, ie. we can atmost have coordinates of n-1 dimensions be at max/min
+    and the coordinates of the remaining dimensions are free to move between max and min
+  - For dimensions whose coordinates are at max/min, volume contribution is simply (max - min) eg. (x_max - x_min)
+  - For the remaining coordinates that are free to move between max and min, we can have different intersection approaches based on the position of the sphere
+    - if the sphere's coordinate for this dimension > dimension_max, then volume contribution = dimension_max - min(all coordinates in this dimension)
+    - if the sphere's coordinate for this dimension < dimension_min, then volume contribution = max(all coordinates in this dimension) - dimension_min
