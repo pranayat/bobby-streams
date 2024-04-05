@@ -110,8 +110,84 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       return minDistance < joinRange;
     }
 
-    private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
-      return 0.2;
+    private double findMinimumNthCoordinate(List<List<Double>> points, Integer n) {
+      double min = Double.POSITIVE_INFINITY;
+
+      for (List<Double> point : points) {
+          double c = point.get(n); // Extract nth-coordinate from the point
+          min = Math.min(min, c); // Update minX if the current x is smaller
+      }
+
+      return min;
+    }
+
+    private double findMaximumNthCoordinate(List<List<Double>> points, Integer n) {
+      double min = Double.NEGATIVE_INFINITY;
+
+      for (List<Double> point : points) {
+          double c = point.get(n); // Extract nth-coordinate from the point
+          min = Math.max(min, c); // Update minX if the current x is smaller
+      }
+
+      return min;
+    }
+
+    // Find the intersection coordinate in the ith dimension, given coordinates in all other dimensions
+    private Double findXi(List<Double> centerCoordinates, double radius, List<Double> otherCoordinates, int index) {
+      Double sumSquares = 0.0;
+
+      // Calculate the sum of squares of differences for each coordinate (except xi)
+      for (int i = 0; i < otherCoordinates.size(); i++) {
+          if (i != index) { // Exclude xi
+              Double diff = otherCoordinates.get(i) - centerCoordinates.get(i);
+              sumSquares += diff * diff;
+          }
+      }
+
+      // Calculate the value of xi using the formula
+      Double xi = Math.sqrt(radius * radius - sumSquares) + centerCoordinates.get(index);
+      
+      return xi;
+  }
+
+    private Double getIntersectionVolumeRatio_2D(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
+      
+      Double xMin = findMinimumNthCoordinate(corners, 0);
+      Double xMax = findMaximumNthCoordinate(corners, 0);
+      Double yMin = findMinimumNthCoordinate(corners, 1);
+      Double yMax = findMaximumNthCoordinate(corners, 1);
+
+      List<List<Double>> validIntersections = new ArrayList<>();
+      Double x, y;
+
+      Double volume = 1.0;
+
+      // there can be max 2 intersection points with a square if the circle is outside the square
+      // left - (x_min, y)
+      y = findXi(tupleCoordinates, joinRange, Arrays.asList(xMin, null), 1);
+      if (y >= yMin && y <= yMax) {
+        volume *= y - yMin;
+      }
+
+      // bottom - (x, y_min)
+      x = findXi(tupleCoordinates, joinRange, Arrays.asList(null, yMin), 0);
+      if (x >= xMin && x <= xMax) {
+        volume *= x - xMin;
+      }
+
+      // right - (x_max, y)
+      y = findXi(tupleCoordinates, joinRange, Arrays.asList(xMax, null), 1);
+      if (y >= yMin && y <= yMax) {
+        volume *= y - yMin;
+      }
+
+      // top - (x, y_max)
+      x = findXi(tupleCoordinates, joinRange, Arrays.asList(null, yMax), 0);
+      if (x >= xMin && x <= xMax) {
+        volume *= x - xMin;
+      }
+
+      
     }
 
     @Override
