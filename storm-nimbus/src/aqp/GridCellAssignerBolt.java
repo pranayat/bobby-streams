@@ -11,6 +11,7 @@ import org.apache.storm.tuple.Values;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.Arrays;
 
 public class GridCellAssignerBolt extends BaseRichBolt {
@@ -133,13 +134,13 @@ public class GridCellAssignerBolt extends BaseRichBolt {
     }
 
     // Find the intersection coordinate in the ith dimension, given coordinates in all other dimensions
-    private Double findXi(List<Double> centerCoordinates, double radius, List<Double> otherCoordinates, int index) {
+    private Double findXi(List<Double> centerCoordinates, double radius, List<Double> intersectionPoint, int index) {
       Double sumSquares = 0.0;
 
       // Calculate the sum of squares of differences for each coordinate (except xi)
-      for (int i = 0; i < otherCoordinates.size(); i++) {
+      for (int i = 0; i < intersectionPoint.size(); i++) {
           if (i != index) { // Exclude xi
-              Double diff = otherCoordinates.get(i) - centerCoordinates.get(i);
+              Double diff = intersectionPoint.get(i) - centerCoordinates.get(i);
               sumSquares += diff * diff;
           }
       }
@@ -148,20 +149,152 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       Double xi = Math.sqrt(radius * radius - sumSquares) + centerCoordinates.get(index);
       
       return xi;
+    }
+
+    private List<Double> getMinsByDimension(List<List<Double>> corners) {
+      List<Double> minElements = new ArrayList<>();
+      int size = corners.get(0).size(); // Get the size of the first inner list
+      for (int i = 0; i < size; i++) {
+          final int index = i; // Using effectively final variable in lambda
+          Double min = corners.stream()
+                              .map(innerList -> innerList.get(index))
+                              .min(Double::compareTo)
+                              .orElse(Double.NaN); // Handle the case where the list is empty
+          minElements.add(min);
+      }
+      return minElements;
+    }
+
+    private List<Double> getMaxesByDimension(List<List<Double>> corners) {
+      List<Double> maxElements = new ArrayList<>();
+      int size = corners.get(0).size(); // Get the size of the first inner list
+      for (int i = 0; i < size; i++) {
+          final int index = i; // Using effectively final variable in lambda
+          Double max = corners.stream()
+                              .map(innerList -> innerList.get(index))
+                              .max(Double::compareTo)
+                              .orElse(Double.NaN); // Handle the case where the list is empty
+          maxElements.add(max);
+      }
+      return maxElements;
+    }
+
+    private List<List<String>> generateCombinations(int n) {
+      List<List<String>> combinations = new ArrayList<>();
+      // Iterate from 0 to 2^n - 1
+      for (int i = 0; i < (1 << n); i++) {
+          List<String> combination = new ArrayList<>();
+          // Convert the current number to binary and generate the combination
+          for (int j = 0; j < n; j++) {
+              combination.add(j, ((i >> j) & 1) == 0 ? "min" : "max");
+          }
+          combinations.add(combination);
+      }
+      return combinations;
   }
 
-    private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange) {
+    private List<List<Double>> findSphereCubeIntersectionPoints(List<Double> minsByDimension, List<Double> maxesByDimension, List<Double> centerCoordinates, Double radius, Integer dimensionality) {
+      List<List<String>> minMaxCombinations = generateCombinations(dimensionality); // find edge intersection coordinate by substituting min/max for other coordinates in sphere equation
+
+      List<List<Double>> intersectionPoints = new ArrayList<>();
+
+      // find x given (_, y_min, z_min), (_, y_min, z_max), (_, y_max, z_min), (_, y_max, z_max)
+      // find y given (x_min, _, z_min), (x_min, _, z_max), (x_max, _, z_min), (x_max, _, z_max)
+      for (int i = 0; i < dimensionality; i++) {
+
+        List<Double> intersectionPoint = new ArrayList<>();
+        intersectionPoint.add(i, null); // this is _ where we will later add the computed coordinate
+
+        for (List<String> minMaxCombination : minMaxCombinations) { // (_, min, min)
+
+          int j = 0;
+          for (String minMax : minMaxCombination) { // min
+            if (j == i) { // leave it null and populat the others with min/max
+              continue;
+            }
+
+            if (minMax.equals("min")) {
+              intersectionPoint.add(minsByDimension.get(j));
+            } else {
+              intersectionPoint.add(maxesByDimension.get(j));
+            }
+
+            j++;
+          }
+
+          Double coordinate = findXi(centerCoordinates, radius, intersectionPoint, i);
+
+          // this coordinate should be in the valid range for this point to be intersecting the grid cell's edge
+          if (minsByDimension.get(i) <= coordinate && coordinate <= maxesByDimension.get(i)) {
+            intersectionPoint.add(i, coordinate);
+            intersectionPoints.add(intersectionPoint);
+          }
+        }
+      }
+
+      return intersectionPoints;
+    }
+    
+    private List<Integer> findFreeDimensions(List<List<Double>> intersectionPoints, List<Double> minsByDimension, List<Double> maxesByDimension) {
+      Integer dimensionality = intersectionPoints.size();
+
+      List<Integer> freeDimensions = new ArrayList<>();
+
+      for (int i = 0; i < dimensionality; i++) {
+        for (List<Double> intersectionPoint : intersectionPoints) {
+          if (intersectionPoint.get(i) != minsByDimension.get(i) && intersectionPoint.get(i) != maxesByDimension.get(i)) {
+            freeDimensions.add(i);
+            break; // check next dimension now, no need to go through all points
+          }
+        }
+      }
+
+      return freeDimensions;
+    }
+
+    private List<Integer> findFixedDimensions(List<Integer> freeDimensions, Integer dimensionality) {
+      List<Integer> fixedDimensions = new ArrayList<>();
+      
+      for (int i = 0; i < dimensionality; i++) {
+        if (!freeDimensions.contains(i)) {
+          fixedDimensions.add(i);
+        }
+      }
+
+      return fixedDimensions;
+    }
+
+    private Double getIntersectionVolumeRatio(List<Double> tupleCoordinates, List<List<Double>> corners, Double joinRange, Integer cellLength) {
       Integer dimensionality = tupleCoordinates.size();
 
       // get max and min values of the grid coordinates in each dimension
       List<Double> maxesByDimension = getMaxesByDimension(corners); // [x_max, y_max, z_max]
       List<Double> minsByDimension = getMinsByDimension(corners); // [x_min, y_min, z_min]
 
-      List<List<Double>> intersectionPoints = findSphereCubeIntersectionPoints();
-      List<Integer> fixedDimensions = findFixedDimensions(intersectionPoints); // eg. [0] if only x is fixed, [] if none are fixed (corner approach)
-      List<Integer> freeDimensions = findFreeDimensions(fixedDimensions, dimensionality); // eg. [1, 3, 4]
+      List<List<Double>> intersectionPoints = findSphereCubeIntersectionPoints(minsByDimension, maxesByDimension, tupleCoordinates, joinRange, dimensionality);
+      List<Integer> freeDimensions = findFreeDimensions(intersectionPoints, minsByDimension, maxesByDimension); // eg. [1, 3, 4]
+      List<Integer> fixedDimensions = findFixedDimensions(freeDimensions, dimensionality); // eg. [0] if only x is fixed, [] if none are fixed (corner approach)
 
-      for ()
+      Double volume = 1.0;
+
+      for (Integer freeDimension : freeDimensions) {
+        List<Double> intersectionCoordinatesForFreeDimension = intersectionPoints.stream()
+          .map(innerList -> innerList.get(freeDimension))
+          .collect(Collectors.toList());
+
+        // eg. if freeDimension = 1 ie. y, so check if y_sphere > y_max
+        if (tupleCoordinates.get(freeDimension) > maxesByDimension.get(freeDimension)) {
+          volume *= maxesByDimension.get(freeDimension) - intersectionCoordinatesForFreeDimension.stream().min(Double::compareTo).orElse(Double.NaN);
+        } else {
+          volume *= intersectionCoordinatesForFreeDimension.stream().max(Double::compareTo).orElse(Double.NaN) - minsByDimension.get(freeDimension);
+        }
+      }
+
+      for (Integer fixedDimension : fixedDimensions) {
+        volume *= maxesByDimension.get(fixedDimension) - minsByDimension.get(fixedDimension);
+      }
+
+      return volume / Math.pow(cellLength, dimensionality);
     }
 
     @Override
@@ -209,7 +342,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
                     if (isFarthestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
                       enclosedBy += "," + joinQuery.getId();
                     } else if (isNearestCornerInJoinRange(tupleCoordinates, corners, joinQuery.radius)) {
-                      volumeRatio = getIntersectionVolumeRatio(tupleCoordinates, corners, joinQuery.radius);
+                      volumeRatio = getIntersectionVolumeRatio(tupleCoordinates, corners, joinQuery.radius, queryGroup.cellLength);
                       intersectedBy += "," + joinQuery.getId() + ":ratio=" + volumeRatio;
                     }
                   }
