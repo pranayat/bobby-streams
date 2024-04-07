@@ -104,12 +104,13 @@
   - For the remaining coordinates that are free to move between max and min, we can have different intersection approaches based on the position of the sphere
     - if the sphere's coordinate for this dimension > dimension_max, then volume contribution = dimension_max - min(all coordinates in this dimension)
     - if the sphere's coordinate for this dimension < dimension_min, then volume contribution = max(all coordinates in this dimension) - dimension_min
+  - volume is underestimated or overesitmated - eg. for a set of intersection points, if sphere is located above and behind the cube and volume is underestimated then if for the same set of points the sphere is located below and in front of the cube it is overestimated
 
 ## Algorithm
 - Find intersection points of the sphere with the cube
 - Classify the intersection as CORNER, EDGE, FACE ... depending on whether 0, 1, 2 ... dimensions have coordinates which are all max/min
 - For the coordinates in the remaining dimensions which are not at max/min
-  - check of sphere's coordinate in that dimension is > or < these coordinates
+  - check if sphere's coordinate in that dimension is > or < these coordinates
   - do this for all combinations of max and min with each of these dimensions
 - For dimensions at max/min volumen contribution a (dim_max - dim_min)
 - For other dimensions

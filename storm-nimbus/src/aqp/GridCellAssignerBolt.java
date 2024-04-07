@@ -202,23 +202,22 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       // find y given (x_min, _, z_min), (x_min, _, z_max), (x_max, _, z_min), (x_max, _, z_max)
       for (int i = 0; i < dimensionality; i++) {
 
-        List<Double> intersectionPoint = new ArrayList<>();
-        intersectionPoint.add(i, null); // this is _ where we will later add the computed coordinate
-
+        
         for (List<String> minMaxCombination : minMaxCombinations) { // (_, min, min)
 
+          List<Double> intersectionPoint = new ArrayList<>(dimensionality);
           int j = 0;
           for (String minMax : minMaxCombination) { // min
-            if (j == i) { // leave it null and populat the others with min/max
-              continue;
-            }
-
-            if (minMax.equals("min")) {
-              intersectionPoint.add(minsByDimension.get(j));
+            
+            if (j != i) { // if j == i leave it null and populat the others with min/max
+              if (minMax.equals("min")) {
+                intersectionPoint.add(j, minsByDimension.get(j));
+              } else {
+                intersectionPoint.add(j, maxesByDimension.get(j));
+              }
             } else {
-              intersectionPoint.add(maxesByDimension.get(j));
+              intersectionPoint.add(j, null); // this is _ where we will later add the computed coordinate
             }
-
             j++;
           }
 
@@ -226,7 +225,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
 
           // this coordinate should be in the valid range for this point to be intersecting the grid cell's edge
           if (minsByDimension.get(i) <= coordinate && coordinate <= maxesByDimension.get(i)) {
-            intersectionPoint.add(i, coordinate);
+            intersectionPoint.set(i, coordinate);
             intersectionPoints.add(intersectionPoint);
           }
         }
@@ -235,9 +234,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       return intersectionPoints;
     }
     
-    private List<Integer> findFreeDimensions(List<List<Double>> intersectionPoints, List<Double> minsByDimension, List<Double> maxesByDimension) {
-      Integer dimensionality = intersectionPoints.size();
-
+    private List<Integer> findFreeDimensions(List<List<Double>> intersectionPoints, List<Double> minsByDimension, List<Double> maxesByDimension, Integer dimensionality) {
       List<Integer> freeDimensions = new ArrayList<>();
 
       for (int i = 0; i < dimensionality; i++) {
@@ -272,7 +269,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
       List<Double> minsByDimension = getMinsByDimension(corners); // [x_min, y_min, z_min]
 
       List<List<Double>> intersectionPoints = findSphereCubeIntersectionPoints(minsByDimension, maxesByDimension, tupleCoordinates, joinRange, dimensionality);
-      List<Integer> freeDimensions = findFreeDimensions(intersectionPoints, minsByDimension, maxesByDimension); // eg. [1, 3, 4]
+      List<Integer> freeDimensions = findFreeDimensions(intersectionPoints, minsByDimension, maxesByDimension, dimensionality); // eg. [1, 3, 4]
       List<Integer> fixedDimensions = findFixedDimensions(freeDimensions, dimensionality); // eg. [0] if only x is fixed, [] if none are fixed (corner approach)
 
       Double volume = 1.0;
