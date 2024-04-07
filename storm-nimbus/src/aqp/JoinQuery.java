@@ -64,7 +64,9 @@ public class JoinQuery {
 
     /////////////////////////////////////////
     public Double extractVolumeRatio(Tuple tuple) {
-        return 0.2;
+        int i = tuple.getStringByField("intersectedBy").indexOf(this.id);
+
+        return Double.parseDouble(tuple.getStringByField("intersectedBy").substring(i).split("=")[1]);
     }
 
     public void removeFromCountSketch(Tuple tuple, Double volumeRatio) throws NoSuchAlgorithmException {
