@@ -3,6 +3,7 @@ package aqp;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -133,6 +134,15 @@ class Query implements Serializable {
 
     private static final long serialVersionUID = 1234567L;
 
+    private List<String> supportedStages;
+
+    public Query() {
+        this.supportedStages = new ArrayList<>();
+        supportedStages.add("count");
+        supportedStages.add("sum");
+        supportedStages.add("avg");
+    }
+
     @JsonProperty("id")
     private String id;
 
@@ -158,8 +168,10 @@ class Query implements Serializable {
     }
 
     public Stage getAggregationStage() {
-        if (this.stages.size() == 2) {
-            return this.stages.get(1);
+        for (Stage stage : this.stages) {
+            if (this.supportedStages.contains(stage.getType())) {
+                return stage;
+            }
         }
 
         return null;
