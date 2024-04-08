@@ -21,6 +21,10 @@
         },
         {
           "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
           "type": "string"
         }
       ]
@@ -46,8 +50,12 @@
         },
         {
           "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
           "type": "string"
-        }        
+        }
       ]
     },
     {
@@ -71,8 +79,12 @@
         },
         {
           "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
           "type": "string"
-        }        
+        }
       ]
     }
   ],
@@ -98,10 +110,28 @@
           "distanceType": "euclidean"
         },
         {
+          "type": "where",
+          "clauses": [
+            {
+              "stream": "stream_1",
+              "field": "onground",
+              "operator": "eq",
+              "value": true
+            },
+            {
+              "stream": "stream_2",
+              "field": "velocity",
+              "operator": "gt",
+              "value": 10
+            }
+          ]
+        },
+        {
           "type": "avg",
           "aggregateStream": "stream_1",
-          "aggregatableFields" : ["velocity"],
-          "groupableFields" : ["time"]
+          "aggregatableFields": [
+            "velocity"
+          ]
         }
       ]
     }

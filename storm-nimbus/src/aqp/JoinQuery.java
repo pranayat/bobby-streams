@@ -18,6 +18,7 @@ public class JoinQuery {
     List<String> aggregatableFields;
     String aggregateStream;
     Panakos panakosCountSketch;
+    List<Clause> whereClauses;
 
     Map<String, Double> clusterJoinCountMap;
     Map<String, Double> clusterJoinSumMap;
@@ -37,6 +38,54 @@ public class JoinQuery {
 
         this.clusterJoinCountMap = new HashMap<>();
         this.clusterJoinSumMap = new HashMap<>();
+    }
+
+    public void setWhereClauses(List<Clause> clauses) {
+        this.whereClauses = clauses;
+    }
+
+    public List<Clause> getWhereClauses() {
+        return this.whereClauses;
+    }
+
+    public Boolean isWhereSatisfied(Tuple tuple) {
+        Boolean satisfied = true;
+
+        for (Clause whereClause : whereClauses) {
+            if (!whereClause.getStream().equals(tuple.getStringByField("streamId"))) {
+                continue;
+            }
+            
+            // for == do a string comparison
+            if (whereClause.getOperator().equals("eq")) {
+                String tupleValue = String.valueOf(tuple.getValueByField(whereClause.getField()));
+                String givenValue = String.valueOf(whereClause.getValue());
+
+                satisfied = satisfied && tupleValue.equals(givenValue);
+            } else {
+                // for >, >=, <, <= do double comparisons
+                Double tupleValue = tuple.getDoubleByField(whereClause.getField());
+                Double givenValue = Double.parseDouble(whereClause.getValue());
+    
+                if (whereClause.getOperator().equals("gt")) {
+                    satisfied = satisfied && tupleValue > givenValue;
+                }
+    
+                else if (whereClause.getOperator().equals("gte")) {
+                    satisfied = satisfied && tupleValue >= givenValue;
+                }
+    
+                else if (whereClause.getOperator().equals("lt")) {
+                    satisfied = satisfied && tupleValue < givenValue;
+                }
+    
+                else if (whereClause.getOperator().equals("lte")) {
+                    satisfied = satisfied && tupleValue <= givenValue;
+                }
+            }
+        }
+
+        return satisfied;
     }
 
     //////// V2 - exact iDistance joins ///////////////////////////////// These take in the join result tuples after doing actual iDistance join

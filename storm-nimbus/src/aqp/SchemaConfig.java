@@ -191,6 +191,9 @@ class Stage implements Serializable {
     @JsonProperty("aggregatableFields")
     private List<String> aggregatableFields;
 
+    @JsonProperty("clauses")
+    private List<Clause> clauses;
+
     public String getType() {
         return type;
     }
@@ -237,5 +240,62 @@ class Stage implements Serializable {
 
     public List<String> getAggregatableFields() {
         return this.aggregatableFields;
+    }
+
+    public List<Clause> getClauses() {
+        return this.clauses;
+    }
+
+    public void setClauses(List<Clause> clauses) {
+        this.clauses = clauses;
+    }
+}
+
+class Clause implements Serializable {
+
+    private static final long serialVersionUID = 1234567L;
+
+    @JsonProperty("stream")
+    private String stream;
+
+    @JsonProperty("field")
+    private String field;
+
+    @JsonProperty("operator")
+    private String operator;
+
+    @JsonProperty("value")
+    private String value;
+
+    public String getStream() {
+        return this.stream;
+    }
+
+    public void setStream(String stream) {
+        this.stream = stream;
+    }
+
+    public String getField() {
+        return this.field;
+    }
+
+    public void setField(String field) {
+        this.field = field;
+    }
+
+    public String getOperator() {
+        return this.operator;
+    }
+
+    public void setOperator(String operator) {
+        this.operator = operator;
+    }
+
+    public String getValue() {
+        return this.value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
     }
 }

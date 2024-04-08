@@ -94,11 +94,10 @@ public class JoinerBolt extends BaseWindowedBolt {
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
                     String tupleStreamId = tuple.getStringByField("streamId");
 
-                    // if (!joinQuery.isWhereSatisfied(tuple)) {
-                    //     continue;
-                    // }
+                    if (!joinQuery.isWhereSatisfied(tuple)) {
+                        continue;
+                    }
 
-                    
                     Double volumeRatio = 1.0; // should be by default 1.0 for enclosed tuples
                     if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
                         volumeRatio = joinQuery.extractVolumeRatio(tuple);

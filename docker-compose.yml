@@ -22,32 +22,32 @@ services:
         environment:
             - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998" # for debugging
 
-    redis:
-        image: redis:latest
-        ports:
-            - "6379:6379"
-        restart: always
+    # redis:
+    #     image: redis:latest
+    #     ports:
+    #         - "6379:6379"
+    #     restart: always
 
-    data-reader:
-        image: python:3.9-bullseye
-        command: tail -F anything
-        depends_on:
-            - redis
-        restart: always
-        volumes:
-            - './data-reader:/data-reader'
+    # data-reader:
+    #     image: python:3.9-bullseye
+    #     command: tail -F anything
+    #     depends_on:
+    #         - redis
+    #     restart: always
+    #     volumes:
+    #         - './data-reader:/data-reader'
 
     # only in prod
-    supervisor:
-        image: storm:2.5.0
-        command: >
-            storm supervisor -c worker.heap.memory.mb=128
-        restart: always
+    # supervisor:
+    #     image: storm:2.5.0
+    #     command: >
+    #         storm supervisor -c worker.heap.memory.mb=128
+    #     restart: always
 
-    ui:
-        image: storm:2.5.0
-        command: >
-            storm ui
-        ports:
-            - 8083:8080
-        restart: always        
+    # ui:
+    #     image: storm:2.5.0
+    #     command: >
+    #         storm ui
+    #     ports:
+    #         - 8083:8080
+    #     restart: always        

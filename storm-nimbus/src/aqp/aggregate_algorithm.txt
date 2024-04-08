@@ -1,17 +1,19 @@
+TID,streamID,dept,salary X TID,streamID,dept,salary   X TID,streamID,dept,salary
+
 T1,stream_1,dept_A,10    X   T2,stream_2,dept_A,10    X   T3,stream_3,dept_B,10
 T4,stream_1,dept_A,10    X   T4,stream_2,dept_A,10    X   T6,stream_3,dept_B,10
 T4,stream_1,dept_B,10    X   T4,stream_2,dept_B,10    X   T6,stream_3,dept_A,10
 
 ------------------------------------------------------------------------------------------------------------
-SUM(stream_1.salary) GROUP_BY(stream_1.department)
+SUM/COUNT/AVG(stream_1.salary) GROUP_BY(stream_1.department)
 
-count_min(stream_1.dept_A) += 1
-count_min_sum(stream_1.dept_A) += stream_1.salary
-avg(stream_1.dept_a) = count_min_sum(stream_1.dept_A) / count_min(stream_1.dept_A)
+count_min(stream_1.dept=A) += 1
+count_min_sum(stream_1.dept=A) += stream_1.salary
+avg = count_min_sum(stream_1.dept_A) / count_min(stream_1.dept_A)
 
-count_min(stream_1.dept_B) += 1
-count_min_sum(stream_1.dept_A) += stream_1.salary
-avg(stream_1.dept_a) = count_min_sum(stream_1.dept_A) / count_min(stream_1.dept_A)
+count_min(stream_1.dept=B) += 1
+count_min_sum(stream_1.dept=B) += stream_1.salary
+avg = count_min_sum(stream_1.dept=B) / count_min(stream_1.dept=B)
 ------------------------------------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------------------------------------
@@ -58,3 +60,16 @@ count_min_sum("stream_1.onGround=true") += stream1.heading // to answer groupBy 
 
 
 
+Find x
+- set y_min, z_min
+- set y_min, z_max
+- set y_max, z_min
+- set y_max, z_max
+Then x is any resultant value between x_min, x_max
+
+Do the same with y and z
+
+Then lengths are
+- x - x_min
+- y - y_min
+- z - z_min
