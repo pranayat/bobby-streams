@@ -88,37 +88,37 @@ public class JoinerBolt extends BaseWindowedBolt {
             }
 
             for (Tuple tuple : inputWindow.getNew()) {
-                QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
-                String tupleClusterId = tuple.getStringByField("clusterId");
-                
-                for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
-                    String tupleStreamId = tuple.getStringByField("streamId");
 
+                QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
+
+                for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+                    
                     if (!joinQuery.isWhereSatisfied(tuple)) {
                         continue;
                     }
-
+                    
                     Double volumeRatio = 1.0; // should be by default 1.0 for enclosed tuples
                     if (joinQuery.isTupleIntersectedByClusterForQueryRadius(tuple)) {
                         volumeRatio = joinQuery.extractVolumeRatio(tuple);
                     }
                     
-                    joinQuery.addToCountSketch(tuple, volumeRatio);
-                    if (tupleStreamId.equals(joinQuery.getAggregateStream())) {
-                        joinQuery.addToSumSketch(tuple, volumeRatio);
-                    }
-
                     Double tupleApproxJoinCount = joinQuery.approxJoinCount(tuple, volumeRatio);
                     double tupleApproxJoinSum = joinQuery.approxJoinSum(tuple, tupleApproxJoinCount);
+
+                    joinQuery.addToCountSketch(tuple, volumeRatio);
+                    if (tuple.getStringByField("streamId").equals(joinQuery.getAggregateStream())) {
+                        joinQuery.addToSumSketch(tuple, volumeRatio);
+                    }
 
                     // no point emitting if no join partners found
                     if (tupleApproxJoinCount > 0) {
                         List<Object> values = new ArrayList<Object>();
                         values.add(joinQuery.getId());
                         values.add(queryGroup.getName());
-                        values.add(tupleClusterId);
+                        values.add(tuple.getStringByField("clusterId"));
                         values.add(tupleApproxJoinCount);
                         values.add(tupleApproxJoinSum);
+                        values.add(false);
     
                         _collector.emit(joinQuery.getId() + "-forAggregationStream", tuple, values);
                     }
@@ -141,6 +141,22 @@ public class JoinerBolt extends BaseWindowedBolt {
                     if (tupleStreamId.equals(joinQuery.getAggregateStream())) {
                         joinQuery.removeFromSumSketch(expiredTuple, volumeRatio);
                     }
+
+                    Double expiredTupleApproxJoinCount = joinQuery.approxJoinCount(expiredTuple, volumeRatio);
+                    double expiredTupleApproxJoinSum = joinQuery.approxJoinSum(expiredTuple, expiredTupleApproxJoinCount);
+
+                    // no point emitting if no join partners found
+                    if (expiredTupleApproxJoinCount > 0) {
+                        List<Object> values = new ArrayList<Object>();
+                        values.add(joinQuery.getId());
+                        values.add(queryGroup.getName());
+                        values.add(expiredTuple.getStringByField("clusterId"));
+                        values.add(expiredTupleApproxJoinCount);
+                        values.add(expiredTupleApproxJoinSum);
+                        values.add(true);
+
+                        _collector.emit(joinQuery.getId() + "-forAggregationStream", expiredTuple, values);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -151,7 +167,7 @@ public class JoinerBolt extends BaseWindowedBolt {
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
         for (Query query : schemaConfig.getQueries()) {
-            declarer.declareStream(query.getId() + "-forAggregationStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum"));
+            declarer.declareStream(query.getId() + "-forAggregationStream", new Fields("queryId", "queryGroupName", "clusterId", "tupleApproxJoinCount", "tupleApproxJoinSum", "isExpired"));
         }
     }
 }

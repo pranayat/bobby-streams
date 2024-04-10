@@ -11,6 +11,9 @@ public class SchemaConfig implements Serializable {
 
     private static final long serialVersionUID = 1234567L;
 
+    @JsonProperty("approximate")
+    private Boolean approximate;
+
     @JsonProperty("streams")
     private List<Stream> streams;
 
@@ -20,7 +23,13 @@ public class SchemaConfig implements Serializable {
     @JsonProperty("clustering")
     private Clustering clustering;
 
-    // Add getters and setters
+    public void setApproximate(Boolean approximate) {
+        this.approximate = approximate;
+    }
+
+    public Boolean getApproximate() {
+        return approximate;
+    }
 
     public List<Stream> getStreams() {
         return streams;

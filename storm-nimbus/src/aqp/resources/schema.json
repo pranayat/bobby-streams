@@ -1,4 +1,5 @@
 {
+  "approximate": false,
   "streams": [
     {
       "id": "stream_1",
@@ -106,7 +107,7 @@
             "lat",
             "lon"
           ],
-          "radius": 56.5685,
+          "radius": 10000,
           "distanceType": "euclidean"
         },
         {

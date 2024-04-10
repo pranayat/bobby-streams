@@ -15,13 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class JoinerBoltV2 extends BaseWindowedBolt {
+public class JoinerBoltExact extends BaseWindowedBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
 
-    public JoinerBoltV2() {
+    public JoinerBoltExact() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -151,6 +151,11 @@ public class JoinerBoltV2 extends BaseWindowedBolt {
                 QueryGroup queryGroup = getQueryGroupByName(tuple.getStringByField("queryGroupName"));
                 
                 for (JoinQuery joinQuery : queryGroup.getJoinQueries()) {
+                    
+                    if (!joinQuery.isWhereSatisfied(tuple)) {
+                        continue;
+                    }
+
                     List<List<Tuple>> joinCombinations = joinQuery.execute(tuple, queryGroup, true, null, null);
                     List<List<Tuple>> validJoinCombinations = new ArrayList<>();
 

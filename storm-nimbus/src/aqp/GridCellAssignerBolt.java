@@ -19,6 +19,7 @@ public class GridCellAssignerBolt extends BaseRichBolt {
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
+    Integer tupleCount = 0;
 
     public GridCellAssignerBolt() {
         this.schemaConfig = SchemaConfigBuilder.build();
@@ -281,21 +282,26 @@ public class GridCellAssignerBolt extends BaseRichBolt {
 
         // eg. if freeDimension = 1 ie. y, so check if y_sphere > y_max
         if (tupleCoordinates.get(freeDimension) > maxesByDimension.get(freeDimension)) {
-          volume *= maxesByDimension.get(freeDimension) - intersectionCoordinatesForFreeDimension.stream().min(Double::compareTo).orElse(Double.NaN);
+          volume *= Math.abs(maxesByDimension.get(freeDimension) - intersectionCoordinatesForFreeDimension.stream().min(Double::compareTo).orElse(Double.NaN));
         } else {
-          volume *= intersectionCoordinatesForFreeDimension.stream().max(Double::compareTo).orElse(Double.NaN) - minsByDimension.get(freeDimension);
+          volume *= Math.abs(intersectionCoordinatesForFreeDimension.stream().max(Double::compareTo).orElse(Double.NaN) - minsByDimension.get(freeDimension));
         }
       }
 
       for (Integer fixedDimension : fixedDimensions) {
-        volume *= maxesByDimension.get(fixedDimension) - minsByDimension.get(fixedDimension);
+        volume *= Math.abs(maxesByDimension.get(fixedDimension) - minsByDimension.get(fixedDimension));
       }
 
-      return volume / Math.pow(cellLength, dimensionality);
+      return Math.abs(volume / Math.pow(cellLength, dimensionality));
     }
 
     @Override
     public void execute(Tuple input) {
+        
+        if (tupleCount == 10) {
+          return;
+        }
+
         String tupleStreamId = input.getStringByField("streamId");
 
         List<int[]> replicationCells = new ArrayList<>();
@@ -391,6 +397,8 @@ public class GridCellAssignerBolt extends BaseRichBolt {
           }
 
           _collector.ack(input);
+          
+          tupleCount++;
       }
 
     @Override

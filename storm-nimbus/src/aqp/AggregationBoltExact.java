@@ -15,13 +15,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.Optional;
 
-public class AggregationBoltV2 extends BaseRichBolt {
+public class AggregationBoltExact extends BaseRichBolt {
     OutputCollector _collector;
     private SchemaConfig schemaConfig;
     List<JoinQuery> joinQueries;
     List<QueryGroup> queryGroups;
 
-    public AggregationBoltV2() {
+    public AggregationBoltExact() {
         this.schemaConfig = SchemaConfigBuilder.build();
     }
 
@@ -57,14 +57,14 @@ public class AggregationBoltV2 extends BaseRichBolt {
 
             // all tuples with the same value for the groupByField will end up in this joiner
             if (isExpired) {
-              joinQuery.removeFromCountSketchV2(tuple);
-              joinQuery.removeFromSumSketchV2(tuple);
+              joinQuery.removeFromExactCount();
+              joinQuery.removeFromExactSum(tuple);
             } else {
-              joinQuery.addToCountSketchV2(tuple);
-              joinQuery.addToSumSketchV2(tuple);
+              joinQuery.addToExactCount();
+              joinQuery.addToExactSum(tuple);
 
-              double count = joinQuery.getPanakosCountSketch().query("v2");
-              double sum = joinQuery.getPanakosSumSketch().query("v2");
+              double count = joinQuery.getExactCount();
+              double sum = joinQuery.getExactSum();
               double avg = 0.0;
   
               if (count != 0) {

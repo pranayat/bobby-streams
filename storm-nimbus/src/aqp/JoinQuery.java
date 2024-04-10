@@ -19,6 +19,8 @@ public class JoinQuery {
     String aggregateStream;
     Panakos panakosCountSketch;
     List<Clause> whereClauses;
+    Double exactCount = 0.0;
+    Double exactSum = 0.0;
 
     Map<String, Double> clusterJoinCountMap;
     Map<String, Double> clusterJoinSumMap;
@@ -88,30 +90,36 @@ public class JoinQuery {
         return satisfied;
     }
 
-    //////// V2 - exact iDistance joins ///////////////////////////////// These take in the join result tuples after doing actual iDistance join
-    public void removeFromCountSketchV2(Tuple tuple) throws NoSuchAlgorithmException {
-
-        this.panakosCountSketch.remove("v2", 1); // TODO group by field can be other types
+    //////// Exact - exact iDistance joins ///////////////////////////////// These take in the join result tuples after doing actual iDistance join
+    public void addToExactCount() {
+        this.exactCount++;
     }
 
-    public void removeFromSumSketchV2(Tuple tuple) throws NoSuchAlgorithmException {
+    public void addToExactSum(Tuple tuple) {
         String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
-        this.panakosSumSketch.remove("v2", tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
+        this.exactSum += tuple.getDoubleByField(aggregateField);
     }
 
-    public void addToCountSketchV2(Tuple tuple) throws NoSuchAlgorithmException {
-
-        this.panakosCountSketch.add("v2", 1); // TODO group by field can be other types
+    public void removeFromExactCount() {
+        this.exactCount--;
     }
 
-    public void addToSumSketchV2(Tuple tuple) throws NoSuchAlgorithmException {
+    public void removeFromExactSum(Tuple tuple) {
         String aggregateField = this.aggregatableFields.get(0); // TODO do this with one sketch per aggregate field
 
-        this.panakosSumSketch.add("v2", tuple.getDoubleByField(aggregateField)); // TODO group by field can be other types
+        this.exactSum -= tuple.getDoubleByField(aggregateField);
     }
 
+    public Double getExactCount() {
+        return this.exactCount;
+    }
+
+    public Double getExactSum() {
+        return this.exactCount;
+    }
     /////////////////////////////////////////
+
     public Double extractVolumeRatio(Tuple tuple) {
         int i = tuple.getStringByField("intersectedBy").indexOf(this.id);
 
