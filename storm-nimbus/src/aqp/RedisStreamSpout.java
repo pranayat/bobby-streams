@@ -25,10 +25,10 @@ public class RedisStreamSpout extends BaseRichSpout {
     ObjectMapper objectMapper;
     SchemaConfig schemaConfig;
     String streamId;
+    String lastId = null;
 
-    public RedisStreamSpout(String streamId) {
+    public RedisStreamSpout() {
         this.schemaConfig = SchemaConfigBuilder.build();
-        this.streamId = streamId;
     }
 
     @Override
@@ -37,57 +37,50 @@ public class RedisStreamSpout extends BaseRichSpout {
         this.objectMapper = new ObjectMapper();
 
         this.jedis = new Jedis("redis", 6379); // Set your Redis server details
-        try {
-            jedis.xgroupCreate(this.streamId, "storm_group", StreamEntryID.LAST_ENTRY, false);
-            jedis.xgroupCreateConsumer(this.streamId, "storm_group", "storm_consumer");
-        } catch (Exception e) {
-            // Group already exists
-            System.err.println(e);
-        }
     }
 
     @Override
-    public void nextTuple() {
-        // Fetch data from Redis stream for all unreceived entries
-        XReadGroupParams xReadGroupParams = new XReadGroupParams();
-        xReadGroupParams.count(1);
-
-        // Create a map of streams and starting entry IDs
-        Map<String, StreamEntryID> streamEntries = new HashMap<>();
-        streamEntries.put(this.streamId, StreamEntryID.UNRECEIVED_ENTRY);
-        
-        List<Map.Entry<String, List<StreamEntry>>> entries = null;
+    public void nextTuple() {        
+        List<StreamEntry> entries = null;
         try {
-            // Fetch entries using xread method
-            entries = jedis.xreadGroup("storm_group", "storm_consumer", xReadGroupParams, streamEntries);
+            if (this.lastId == null) {
+                entries = jedis.xrange("flight_stream", "-", "+", 20);
+            } else {
+                entries = jedis.xrange("flight_stream", "(" + lastId, "+", 20);
+            }
+
+            if (entries != null) {
+                lastId = entries.get(entries.size() - 1).getID().toString();
+            }
         } catch (Exception e) {
-            System.err.println(e);
+            // System.err.println(e);
         }
 
         if (entries == null) {
             return;
         }
 
-        StreamEntry entry = entries.get(0).getValue().get(0); // read 1 tuple from 1 stream, hence getting 0th values
-        String jsonFields = entry.getFields().get("data");
-        JsonNode jsonNode;
-        try {
-            jsonNode = objectMapper.readTree(jsonFields);
-            List<Object> values = new ArrayList<>();
-            for (Field field : this.schemaConfig.getStreamById(this.streamId).getFields()) {
-                if (field.getName().equals("tupleId")) {
-                    values.add(entry.getID().toString());
-                } else if (field.getType().equals("double")) {
-                    values.add(jsonNode.get(field.getName()).asDouble());
-                } else {
-                    values.add(jsonNode.get(field.getName()).asText());
+        for (StreamEntry entry : entries) {
+            String jsonFields = entry.getFields().get("data");
+            JsonNode jsonNode;
+            try {
+                jsonNode = objectMapper.readTree(jsonFields);
+                List<Object> values = new ArrayList<>();
+                for (Field field : this.schemaConfig.getStreamById("stream_1").getFields()) {
+                    if (field.getName().equals("tupleId")) {
+                        values.add(entry.getID().toString());
+                    } else if (field.getType().equals("double")) {
+                        values.add(jsonNode.get(field.getName()).asDouble());
+                    } else {
+                        values.add(jsonNode.get(field.getName()).asText());
+                    }
                 }
+    
+                values.add(jsonNode.get("streamId").asText());
+                collector.emit(new Values(values.toArray()), entry.getID().toString());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
-
-            values.add(this.streamId);
-            collector.emit(new Values(values.toArray()), entry.getID().toString());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

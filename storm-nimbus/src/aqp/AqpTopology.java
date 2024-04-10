@@ -14,16 +14,11 @@ public class AqpTopology {
 
         SchemaConfig schemaConfig = SchemaConfigBuilder.build();
         TopologyBuilder builder = new TopologyBuilder();
-
-        for (Stream stream : schemaConfig.getStreams()) {
-            builder.setSpout(stream.getId().concat("_spout"), new RedisStreamSpout(stream.getId()), 1);
+        builder.setSpout("data_spout", new RedisStreamSpout(), 1);
             // builder.setSpout(stream.getId().concat("_spout"), new Test1Spout(stream.getId()), 1);
-        }
 
         BoltDeclarer gridCellAssignerBolt = builder.setBolt("gridCellAssigner", new GridCellAssignerBolt(), 1);
-        for (Stream stream : schemaConfig.getStreams()) {
-            gridCellAssignerBolt.shuffleGrouping(stream.getId().concat("_spout"));
-        }
+        gridCellAssignerBolt.shuffleGrouping("data_spout");
 
         if (schemaConfig.getApproximate()) {
             builder.setBolt("joiner", new JoinerBolt()

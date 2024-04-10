@@ -298,10 +298,6 @@ public class GridCellAssignerBolt extends BaseRichBolt {
     @Override
     public void execute(Tuple input) {
         
-        if (tupleCount == 10) {
-          return;
-        }
-
         String tupleStreamId = input.getStringByField("streamId");
 
         List<int[]> replicationCells = new ArrayList<>();

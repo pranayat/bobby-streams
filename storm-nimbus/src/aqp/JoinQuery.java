@@ -116,7 +116,7 @@ public class JoinQuery {
     }
 
     public Double getExactSum() {
-        return this.exactCount;
+        return this.exactSum;
     }
     /////////////////////////////////////////
 
