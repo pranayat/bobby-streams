@@ -1,0 +1,16 @@
+{
+  "java.configuration.runtimes": [
+
+    {
+        "name": "JavaSE-11",
+        "path": "/opt/homebrew/opt/openjdk@11",
+        "default": true
+    },
+    {
+      "name": "JavaSE-17",
+      "path": "/opt/homebrew/opt/openjdk@17",
+      "default": true
+  }    
+  ],
+  "java.jdt.ls.java.home": "/opt/homebrew/opt/openjdk@17"
+}

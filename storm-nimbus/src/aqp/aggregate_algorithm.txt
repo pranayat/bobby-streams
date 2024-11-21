@@ -1,0 +1,75 @@
+TID,streamID,dept,salary X TID,streamID,dept,salary   X TID,streamID,dept,salary
+
+T1,stream_1,dept_A,10    X   T2,stream_2,dept_A,10    X   T3,stream_3,dept_B,10
+T4,stream_1,dept_A,10    X   T4,stream_2,dept_A,10    X   T6,stream_3,dept_B,10
+T4,stream_1,dept_B,10    X   T4,stream_2,dept_B,10    X   T6,stream_3,dept_A,10
+
+------------------------------------------------------------------------------------------------------------
+SUM/COUNT/AVG(stream_1.salary) GROUP_BY(stream_1.department)
+
+count_min(stream_1.dept=A) += 1
+count_min_sum(stream_1.dept=A) += stream_1.salary
+avg = count_min_sum(stream_1.dept_A) / count_min(stream_1.dept_A)
+
+count_min(stream_1.dept=B) += 1
+count_min_sum(stream_1.dept=B) += stream_1.salary
+avg = count_min_sum(stream_1.dept=B) / count_min(stream_1.dept=B)
+------------------------------------------------------------------------------------------------------------
+
+------------------------------------------------------------------------------------------------------------
+SUM(stream_1.salary) GROUP_BY(stream_2.department)
+
+count_min(stream_2.dept_A) += 1
+count_min_sum(stream_2.dept_A) += stream_1.salary
+avg(stream_2.dept_A) = count_min_sum(stream_2.dept_A) / count_min(stream_2.dept_A)
+------------------------------------------------------------------------------------------------------------
+
+{
+  "type": "avg",
+  "stream": "stream_1"
+  aggregatable_fields : ["velocity", "heading"]
+  groupable_fields : ["time", "onGround"]
+  "having": "time=2300" // ad-hoc query on having
+}
+
+// incoming tuple (stream:stream_1, time:2300, onGround:true)
+count_min("stream_1") += 1 // to answer avg queries without groupBy
+count_min("stream_1.time=2300") += 1 // to answer groupBy queries with having "stream_1.time=2300"
+count_min("stream_1.onGround=true") += 1 // to answer groupBy queries with having "stream_1.onGround=true"
+
+// on: "stream_1.velocity"
+count_min_sum("stream_1") += stream1.velocity // to answer avg queries without groupBy
+count_min_sum("stream_1.time=2300") += stream1.velocity // to answer groupBy queries with having "stream_1.time=2300"
+count_min_sum("stream_1.onGround=true") += stream1.velocity // to answer groupBy queries with having "stream_1.onGround=true"
+
+then avg(stream_1.velocity, having:time=2300) = count_min_sum("stream_1.time=2300") / count_min("stream_1.time=2300")
+
+- make sure all join results of a join query, belonging to stream_1 and having the same time value end up in the same aggregate bolt => emit only stream_1 tuples with fieldsGrouping(time) on stream : "query_1-groupBy:time"
+- make sure all join results of a join query, belonging to stream_1 and having the same onGround value end up in the same aggregate bolt => emit only stream_1 tuples with fieldsGrouping(onGround) on stream : "query_1-groupBy:onGround"
+
+
+
+
+
+
+
+// on: "stream_1.heading" (this will be a differnet sketch from the one for on: "stream_1.velocity" as values may have very different range?)
+count_min_sum("stream_1") += stream1.heading // to answer avg queries without groupBy
+count_min_sum("stream_1.time=2300") += stream1.heading // to answer groupBy queries with having "stream_1.time=2300"
+count_min_sum("stream_1.onGround=true") += stream1.heading // to answer groupBy queries with having "stream_1.onGround=true"
+
+
+
+Find x
+- set y_min, z_min
+- set y_min, z_max
+- set y_max, z_min
+- set y_max, z_max
+Then x is any resultant value between x_min, x_max
+
+Do the same with y and z
+
+Then lengths are
+- x - x_min
+- y - y_min
+- z - z_min

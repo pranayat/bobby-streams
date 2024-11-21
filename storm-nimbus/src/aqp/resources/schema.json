@@ -1,0 +1,140 @@
+{
+  "approximate": false,
+  "streams": [
+    {
+      "id": "stream_1",
+      "fields": [
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "lon",
+          "type": "double"
+        },
+        {
+          "name": "velocity",
+          "type": "double"
+        },
+        {
+          "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "stream_2",
+      "fields": [
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "lon",
+          "type": "double"
+        },
+        {
+          "name": "velocity",
+          "type": "double"
+        },
+        {
+          "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "stream_3",
+      "fields": [
+        {
+          "name": "tupleId",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "double"
+        },
+        {
+          "name": "lon",
+          "type": "double"
+        },
+        {
+          "name": "velocity",
+          "type": "double"
+        },
+        {
+          "name": "time",
+          "type": "double"
+        },
+        {
+          "name": "onground",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "clustering": {
+    "type": "grid"
+  },
+  "queries": [
+    {
+      "id": "query_2",
+      "stages": [
+        {
+          "type": "join",
+          "between": [
+            "stream_1",
+            "stream_2",
+            "stream_3"
+          ],
+          "on": [
+            "lat",
+            "lon"
+          ],
+          "radius": 10000,
+          "distanceType": "euclidean"
+        },
+        {
+          "type": "where",
+          "clauses": [
+            {
+              "stream": "stream_1",
+              "field": "onground",
+              "operator": "eq",
+              "value": true
+            },
+            {
+              "stream": "stream_2",
+              "field": "velocity",
+              "operator": "gt",
+              "value": 10
+            }
+          ]
+        },
+        {
+          "type": "avg",
+          "aggregateStream": "stream_1",
+          "aggregatableFields": [
+            "velocity"
+          ]
+        }
+      ]
+    }
+  ]
+}

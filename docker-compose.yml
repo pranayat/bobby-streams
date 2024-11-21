@@ -1,0 +1,53 @@
+version: "3.8"
+
+volumes:
+    storm-nimbus:
+    data-reader:
+
+services:
+    zookeeper:
+        image: zookeeper:3.5.9
+        restart: always
+
+    nimbus:
+        image: pranayatomar/storm-jdk-m1 # change this to pranayatomar/storm-jdk for linux deployments
+        command: >
+            storm nimbus -c storm.local.hostname="nimbus" -c worker.heap.memory.mb=128
+        ports:
+            - 6627:6627
+            - 8998:8998 # for debugging
+        restart: always
+        volumes:
+            - './storm-nimbus:/storm-nimbus'
+        environment:
+            - STORM_JAR_JVM_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:8998" # for debugging
+
+    # redis:
+    #     image: redis:latest
+    #     ports:
+    #         - "6379:6379"
+    #     restart: always
+
+    # data-reader:
+    #     image: python:3.9-bullseye
+    #     command: tail -F anything
+    #     depends_on:
+    #         - redis
+    #     restart: always
+    #     volumes:
+    #         - './data-reader:/data-reader'
+
+    # only in prod
+    # supervisor:
+    #     image: storm:2.5.0
+    #     command: >
+    #         storm supervisor -c worker.heap.memory.mb=128
+    #     restart: always
+
+    # ui:
+    #     image: storm:2.5.0
+    #     command: >
+    #         storm ui
+    #     ports:
+    #         - 8083:8080
+    #     restart: always        
